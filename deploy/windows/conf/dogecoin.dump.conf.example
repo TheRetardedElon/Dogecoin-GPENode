@@ -1,0 +1,23 @@
+# Profile A — Windows dump / Fast Sync producer (headless)
+# Copy to datadir as dogecoin.conf and EDIT credentials.
+
+server=1
+listen=1
+txindex=0
+
+# Bounded disk (MiB; 1.14.x prune minimum 2200 when pruning)
+prune=5500
+dbcache=1024
+maxmempool=50
+maxconnections=32
+
+# RPC — localhost only (never public)
+rpcbind=127.0.0.1
+rpcallowip=127.0.0.1
+rpcuser=gpenode
+rpcpassword=CHANGE_ME_LONG_RANDOM
+
+# Dump-only: no wallet needed for pure snapshot producer
+disablewallet=1
+
+printtoconsole=0

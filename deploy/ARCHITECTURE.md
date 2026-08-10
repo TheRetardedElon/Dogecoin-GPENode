@@ -72,12 +72,27 @@ Conf samples:
 
 - Rewrite dogecoind in Rust/Go/Zig for mainnet dumps  
 - Public RPC  
-- GUI on the server  
+- GUI on the dump server  
 - Live chainstate on object storage  
+
+## Windows headless (next product cut)
+
+Same rules: **C++ dogecoind**, no Qt product package, Windows **Service**.
+
+See **`windows/ARCHITECTURE-WINDOWS-HEADLESS.md`** and `windows/install-service.ps1`.
+
+| Phase | Deliverable |
+|-------|-------------|
+| W0 | Service install scripts (done in tree) |
+| W1 | Win64 zip release of headless binaries |
+| W2 | Scheduled dump task |
+| W3 | Optional tray + operator TUI (RPC only) |
 
 ## Related
 
-- `build-dump-daemon.sh` — headless build  
+- `build-dump-daemon.sh` — Linux headless build  
+- `package-headless-release.sh` — Linux GitHub release tarball  
+- `windows/` — Windows service packaging  
 - `../gpenode-ops/` — Go operator CLI  
 - `OPERATOR_KIT.md`, `GPENODE.md`  
-- Product mesh/docs: `html/docs/`  
+

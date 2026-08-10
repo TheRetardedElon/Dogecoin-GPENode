@@ -94,9 +94,25 @@ serverdetails.example.txt
 ```
 
 **Do not** rewrite Dogecoin consensus in another language for “speed.”  
-**Do** keep the server pure CLI (`--without-gui`) and automate with Go.
+**Do** keep the node pure headless C++ and automate with Go / scripts.
+
+| Platform | Headless packaging |
+|----------|-------------------|
+| **Linux** | GitHub Release tarball + systemd |
+| **Windows** | Service scripts in `deploy/windows/` (W0); win64 zip next (W1) |
 
 Mesh stages: **M1** single public CDN · **M2** multi-URL `urls[]` failover (client + mirrors).
+
+### Windows Service (W0)
+
+```powershell
+cd deploy\windows
+# place dogecoind.exe + dogecoin-cli.exe in .\bin\
+powershell -ExecutionPolicy Bypass -File .\install-service.ps1 -Profile dump
+.\status-service.ps1
+```
+
+See `deploy/windows/README.md` and `deploy/windows/ARCHITECTURE-WINDOWS-HEADLESS.md`.
 
 ---
 

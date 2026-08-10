@@ -1,0 +1,21 @@
+# Profile B — Windows settlement host (headless + wallet)
+# Copy to datadir as dogecoin.conf and EDIT credentials.
+
+server=1
+listen=1
+txindex=0
+
+prune=5500
+dbcache=512
+maxmempool=50
+maxconnections=40
+
+rpcbind=127.0.0.1
+rpcallowip=127.0.0.1
+rpcuser=gpenode
+rpcpassword=CHANGE_ME_LONG_RANDOM
+
+# Wallet enabled (default) for merchant settlement
+# disablewallet=0
+
+printtoconsole=0

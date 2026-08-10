@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Glossary — Dogecoin Dev Docs</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Ð Dogecoin Dev</h1>
+        <p>Local project documentation</p>
+      </div>
+      <nav></nav>
+    </aside>
+
+    <main class="main">
+      <h1>Glossary</h1>
+      <p class="lead">Shared vocabulary so “conversion,” “consensus,” and “wallet DB” stay unambiguous.</p>
+
+      <table>
+        <thead>
+          <tr><th>Term</th><th>Meaning here</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Consensus</strong></td>
+            <td>Rules that determine which blocks/txs are valid. Changing these can fork the network.</td>
+          </tr>
+          <tr>
+            <td><strong>Policy</strong></td>
+            <td>Node-local relay/mempool preferences. Can differ between nodes without forking.</td>
+          </tr>
+          <tr>
+            <td><strong>Chainstate</strong></td>
+            <td>UTXO / tip index data used for validation; currently LevelDB-backed.</td>
+          </tr>
+          <tr>
+            <td><strong>Fast Sync</strong></td>
+            <td>Bootstrap via attested UTXO snapshot from CDN (stream-hash, fail closed), then background P2P prove. See <a href="fast-sync.html">Fast Sync explained</a> · <a href="diagrams.html">Diagrams</a>.</td>
+          </tr>
+          <tr>
+            <td><strong>Multi-operator mesh</strong></td>
+            <td>Independent dumpers + CDN mirrors for the same hash-checked artifacts (geo, capacity, failover). Not extra consensus trust. See <a href="multi-operator-mesh.html">Multi-operator mesh</a>.</td>
+          </tr>
+          <tr>
+            <td><strong>hash_serialized</strong></td>
+            <td>Hash of the UTXO <em>set</em> at height H (not the snapshot file bytes).</td>
+          </tr>
+          <tr>
+            <td><strong>Artifact SHA-256</strong></td>
+            <td>SHA-256 of the CDN snapshot <em>file</em> bytes (sha256sum style).</td>
+          </tr>
+          <tr>
+            <td><strong>CDBWrapper</strong></td>
+            <td>Abstraction over the KV store for chainstate/index (obfuscation + cache hooks).</td>
+          </tr>
+          <tr>
+            <td><strong>BDB / Berkeley DB</strong></td>
+            <td>Legacy wallet.dat engine. Painful dependency; migration target is SQLite.</td>
+          </tr>
+          <tr>
+            <td><strong>Rebrand / conversion</strong></td>
+            <td>Bitcoin naming → Dogecoin naming in files, types, UI, docs — not a consensus change.</td>
+          </tr>
+          <tr>
+            <td><strong>Header guard</strong></td>
+            <td><code>#ifndef BITCOIN_FOO_H</code> style include guards (T3 rebrand work).</td>
+          </tr>
+          <tr>
+            <td><strong>IBD</strong></td>
+            <td>Initial Block Download — syncing the chain from peers.</td>
+          </tr>
+          <tr>
+            <td><strong>IBD rescue</strong></td>
+            <td>Allow non-preferred peers to fetch blocks when preferred downloaders stall (<code>-ibdrescue</code>).</td>
+          </tr>
+          <tr>
+            <td><strong>ASMAP</strong></td>
+            <td>ASN map for peer bucketing (<code>-asmap</code>); better network diversity than raw IP prefixes alone.</td>
+          </tr>
+          <tr>
+            <td><strong>AssumeUTXO</strong></td>
+            <td>Bootstrap by loading a UTXO snapshot at height H, then fully validating history in the background. Not a soft fork. Mainnet attested height in this tree: <strong>6324519</strong>. See <a href="assumeutxo.html">AssumeUTXO</a> · <a href="diagrams.html">Diagrams</a>.</td>
+          </tr>
+          <tr>
+            <td><strong>mapAssumeutxo</strong></td>
+            <td>Compiled attestation map in <code>chainparams</code>: height H → expected <code>hash_serialized</code>. Activation without <code>-assumeutxodev</code> requires a matching entry.</td>
+          </tr>
+          <tr>
+            <td><strong>Dual chainstate</strong></td>
+            <td>Active tip (often snapshot) + background IBD coins used to prove the assume hash (<code>node/chainstate</code>). Diagram: <a href="../assets/diagrams/assumeutxo-diagram.png">assumeutxo-diagram.png</a>.</td>
+          </tr>
+          <tr>
+            <td><strong>hash_serialized</strong></td>
+            <td>Deterministic hash of the UTXO set (same family as <code>gettxoutsetinfo</code>); used to match snapshot vs background.</td>
+          </tr>
+          <tr>
+            <td><strong>assumeutxo.dat</strong></td>
+            <td>Datadir file persisting AssumeUTXO session (base hash, coins hash, status) for restart restore (Phase C2).</td>
+          </tr>
+          <tr>
+            <td><strong>AuxPoW</strong></td>
+            <td>Auxiliary Proof of Work; enables merge mining. Untouched by IBD/AssumeUTXO workstreams.</td>
+          </tr>
+          <tr>
+            <td><strong>Core Pro</strong></td>
+            <td>This product shell: pure DOGE node + wallet + Qt (Business, Meme Stream, Network, Arcade) on 1.14 DNA.</td>
+          </tr>
+          <tr>
+            <td><strong>DigiShield</strong></td>
+            <td>Dogecoin difficulty adjustment algorithm family used here.</td>
+          </tr>
+          <tr>
+            <td><strong>GPE / GoPastEarth</strong></td>
+            <td>Optional multi-tenant business platform (POS, inventory, invoices). Not consensus. Settlement principle: native DOGE. See <a href="payment-layer.html">Payment layer</a>.</td>
+          </tr>
+          <tr>
+            <td><strong>Payment layer</strong></td>
+            <td>Merchant/app tooling for orders and invoices with final money on Dogecoin L1 — not an EVM rollup “L2.”</td>
+          </tr>
+          <tr>
+            <td><strong>Native DOGE</strong></td>
+            <td>DOGE on the Dogecoin chain (not a wrapped or bridged IOU on another VM).</td>
+          </tr>
+          <tr>
+            <td><strong>GigaWallet</strong></td>
+            <td>Foundation-oriented invoice/payment backend pattern for merchants (candidate adapter; not required for Core Pro local POS).</td>
+          </tr>
+          <tr>
+            <td><strong>DogeConnect</strong></td>
+            <td>Payment-request style protocol for wallet/POS handshakes (design-level here).</td>
+          </tr>
+          <tr>
+            <td><strong>Meme Stream</strong></td>
+            <td>Client-gated social/meme feed. SPA view-only; Core/Qt posts with publish key + wallet. Spec: <a href="memestream-integration.html">MemeStream integration</a>.</td>
+          </tr>
+          <tr>
+            <td><strong>Allowlist</strong></td>
+            <td>Bitcoin strings we intentionally keep (copyrights, historical URLs).</td>
+          </tr>
+          <tr>
+            <td><strong>Baseline tag</strong></td>
+            <td>Git tag once build + known features are frozen as recovery starting point.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footer">Add terms whenever a discussion gets ambiguous.</div>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

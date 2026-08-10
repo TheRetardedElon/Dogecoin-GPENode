@@ -1,0 +1,11 @@
+# Operator secrets template — copy to serverdetails.txt (gitignored)
+# NEVER commit real passwords or private keys.
+
+# --- host ---
+ip: <DUMP_NODE_HOST>
+user: root
+# Prefer SSH keys; password only as emergency fallback
+# pass: <DO_NOT_COMMIT>
+
+# --- optional paths ---
+# operator_private_key: local/ssh/id_ed25519_operator

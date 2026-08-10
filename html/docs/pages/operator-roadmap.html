@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Operator roadmap — GPENode</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Ð GPENode</h1>
+        <p>Operator documentation</p>
+      </div>
+      <nav></nav>
+    </aside>
+
+    <main class="main">
+      <h1>Operator roadmap (this tree)</h1>
+      <p class="lead">
+        Work that belongs on <strong>GPENode</strong> — not Core Pro GUI packaging.
+        Client mesh M2 code still lands primarily in dogedev; we publish mesh-ready manifests here.
+      </p>
+      <div class="meta">
+        <span>Updated: 2026-08-10</span>
+        <span>Mesh: M1 live · M2 next</span>
+      </div>
+
+      <h2>Done</h2>
+      <ul class="checklist">
+        <li class="done">Custom daemon path with <code>dumptxoutset</code></li>
+        <li class="done">NVMe / block storage model for hot datadir</li>
+        <li class="done">Snapshot script → <code>.dat</code> + digests + <code>latest.json</code></li>
+        <li class="done">Public CDN hostname + static hosting (M1)</li>
+        <li class="done">Mainnet attestation height used by clients (6324519)</li>
+        <li class="done">Operator HTML docs re-homed (not stock dogedev dashboard)</li>
+        <li class="done">Secrets gitignored; public docs free of passwords</li>
+        <li class="done"><code>urls[]</code> field in snapshot manifest (mesh-ready)</li>
+      </ul>
+
+      <h2>Architecture locked</h2>
+      <ul class="checklist">
+        <li class="done">C++ <code>dogecoind</code> = consensus only path (no language rewrite of L1)</li>
+        <li class="done">Headless <code>--without-gui</code> build script</li>
+        <li class="done">Profile A dump / Profile B settlement conf examples</li>
+        <li class="done">Go <code>gpenode-ops</code> scaffold (status / dump / publish / verify-cdn)</li>
+        <li class="done"><code>deploy/ARCHITECTURE.md</code></li>
+      </ul>
+
+      <h2>Now / next (GPENode)</h2>
+      <ul class="checklist">
+        <li class="done">Go toolchain installed; <code>gpenode-ops</code> built (Windows + Linux)</li>
+        <li class="done"><code>gpenode-ops verify-cdn</code> live against GPE CDN (height 6324519)</li>
+        <li class="done">Stage package <code>out/gpenode-ops/</code> + staged <code>out/dump-daemon/</code> (1.14.102 dump RPCs, no Qt)</li>
+        <li class="done">Install staged daemon + ops on live dump node (v1.14.102 + dumptxoutset + gpenode-ops)</li>
+        <li class="partial">Scheduled dumps (systemd timer or cron) + CDN pull/push</li>
+        <li class="partial">Harden <code>gpenode-ops</code> (cookie RPC auth, dry-run publish, post-rsync sha256)</li>
+        <li class="todo">CDN rate-limit / cache headers audit on live box</li>
+        <li class="todo">Second mirror URL in <code>urls[]</code> (even object storage)</li>
+        <li class="todo">Public OSS zip of <code>deploy/</code> + <code>gpenode-ops</code> + OPERATOR_KIT (no secrets)</li>
+        <li class="todo">Retention policy: how many old <code>utxo-*.dat</code> to keep on CDN</li>
+        <li class="todo">Runbook: rotate dump height → coordinate dogedev map entry</li>
+      </ul>
+
+      <h2>Mostly dogedev (track, don’t re-implement here)</h2>
+      <ul class="checklist">
+        <li class="todo">Client M2: parse <code>urls[]</code>, failover, same sha256</li>
+        <li class="todo">More <code>mapAssumeutxo</code> heights after multi-party dumps</li>
+        <li class="todo">Linux client HTTPS polish</li>
+        <li class="partial">P2 default prune product for wallet nodes</li>
+      </ul>
+
+      <h2>Lab only (keep, demote)</h2>
+      <ul class="checklist">
+        <li class="done">Regtest payflow smoke for GPE settlement wiring</li>
+        <li class="partial">Testnet experiments (seeds often weak)</li>
+      </ul>
+
+      <h2>Non-goals on this tree</h2>
+      <ul>
+        <li>Shipping Windows Core Pro installers</li>
+        <li>Arcade / theme gallery product work</li>
+        <li>Public dogecoind RPC</li>
+        <li>Live LevelDB on object storage</li>
+      </ul>
+
+      <div class="footer">
+        See also <a href="gpenode.html">GPENode overview</a> ·
+        <a href="multi-operator-mesh.html">mesh</a> ·
+        <code>deploy/README.md</code>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Source of truth — Dogecoin GPENode</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Ð GPENode</h1>
+        <p>Operator documentation</p>
+      </div>
+      <nav></nav>
+    </aside>
+
+    <main class="main">
+      <h1>Source of truth</h1>
+      <p class="lead">How to resolve disagreements without leaking secrets into git.</p>
+
+      <ol>
+        <li><strong>Live dump node + CDN behavior</strong> — what actually runs in production.</li>
+        <li><strong>This repository</strong> — <code>deploy/</code>, <code>gpenode-ops/</code>, <code>html/docs/</code>.</li>
+        <li><strong>Core Pro product repo</strong> — client Fast Sync, <code>mapAssumeutxo</code>, Windows packages.</li>
+        <li><strong>Chat logs</strong> — intent only until reflected in code/docs.</li>
+      </ol>
+
+      <div class="callout danger">
+        <strong>Never canonical</strong>
+        Passwords, private keys, or live RPC credentials in markdown/HTML.
+        Those live only in local gitignored files.
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Concern</th><th>Location</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Operator kit</td><td>This repo <code>deploy/</code></td></tr>
+          <tr><td>Go glue</td><td><code>gpenode-ops/</code></td></tr>
+          <tr><td>Architecture</td><td><code>deploy/ARCHITECTURE.md</code></td></tr>
+          <tr><td>Local secrets template</td><td><code>serverdetails.example.txt</code></td></tr>
+          <tr><td>Local secrets (you)</td><td><code>serverdetails.txt</code> — gitignored</td></tr>
+          <tr><td>Client attestation</td><td>Core Pro release <code>mapAssumeutxo</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="footer">Dogecoin GPENode · 2026-08-10</div>
+    </main>
+  </div>
+  <script src="../assets/nav.js"></script>
+</body>
+</html>

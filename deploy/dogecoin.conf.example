@@ -1,0 +1,32 @@
+# GPE settlement node — copy to $DATADIR/dogecoin.conf
+# Datadir lives on Vultr File System mount by default.
+
+# --- network ---
+# testnet=1
+# regtest=1
+listen=1
+server=1
+txindex=0
+
+# Keep disk bounded on a settlement host (MiB; minimum 2200 for dogecoind 1.14.x)
+prune=2200
+dbcache=256
+maxmempool=50
+maxconnections=40
+# testnet=1
+
+# --- RPC (bind private / localhost only in production) ---
+rpcuser=CHANGE_ME
+rpcpassword=CHANGE_ME_LONG_RANDOM
+rpcallowip=127.0.0.1
+rpcbind=127.0.0.1
+# When GPE app is on another private IP, add:
+# rpcallowip=10.0.0.0/8
+# rpcbind=0.0.0.0
+# and firewall to that IP only.
+
+# --- wallet ---
+# disablewallet=0
+
+# --- logging ---
+printtoconsole=0

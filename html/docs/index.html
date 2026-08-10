@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dogecoin GPENode — Operator docs</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Ð GPENode</h1>
+        <p>Operator documentation</p>
+      </div>
+      <nav></nav>
+    </aside>
+
+    <main class="main">
+      <h1>Dogecoin GPENode</h1>
+      <p class="lead">
+        Public operator kit: headless <strong>C++ dogecoind</strong> +
+        <strong>Go gpenode-ops</strong> glue + static CDN publish.
+        Same Dogecoin consensus — no passwords or host secrets in this site.
+      </p>
+      <div class="meta">
+        <span>Repo: <strong>Dogecoin-GPENode</strong></span>
+        <span>CDN example: <code>sync.doge.gopastearth.com</code></span>
+        <span>Updated: 2026-08-10</span>
+      </div>
+
+      <div class="callout ok">
+        <strong>Architecture</strong>
+        Consensus stays in C++ <code>dogecoind</code> (<code>--without-gui</code>).
+        Go <code>gpenode-ops</code> only orchestrates dump/publish/health over localhost RPC.
+        See <code>deploy/ARCHITECTURE.md</code> and root <code>README.md</code>.
+      </div>
+
+      <div class="callout warn">
+        <strong>Secrets</strong>
+        Never put passwords, private keys, or live RPC credentials in docs or git.
+        Use local <code>serverdetails.txt</code> (from the example template) only on your machine.
+      </div>
+
+      <h2>Status model</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3>Dump node</h3>
+          <div class="stat">C++</div>
+          <p>Headless dogecoind + dumptxoutset</p>
+          <span class="badge badge-done">Core DNA</span>
+        </div>
+        <div class="card">
+          <h3>Ops glue</h3>
+          <div class="stat">Go</div>
+          <p>gpenode-ops status / dump / publish</p>
+          <span class="badge badge-done">Shipped</span>
+        </div>
+        <div class="card">
+          <h3>CDN</h3>
+          <div class="stat">Static</div>
+          <p>HTTPS files only — dumb pipe</p>
+          <span class="badge badge-done">M1</span>
+        </div>
+        <div class="card">
+          <h3>Mesh</h3>
+          <div class="stat">M2 next</div>
+          <p>Multi-URL urls[] failover</p>
+          <span class="badge badge-partial">Roadmap</span>
+        </div>
+      </div>
+
+      <h2>Read next</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3>GPENode overview</h3>
+          <p>Roles, loop, clean kit</p>
+          <a class="card-link" href="pages/gpenode.html">Open →</a>
+        </div>
+        <div class="card">
+          <h3>Multi-operator mesh</h3>
+          <p>How delivery mesh works</p>
+          <a class="card-link" href="pages/multi-operator-mesh.html">Open →</a>
+        </div>
+        <div class="card">
+          <h3>Operator roadmap</h3>
+          <p>What to build next</p>
+          <a class="card-link" href="pages/operator-roadmap.html">Open →</a>
+        </div>
+        <div class="card">
+          <h3>Fast Sync (clients)</h3>
+          <p>What end users do with your artifacts</p>
+          <a class="card-link" href="pages/fast-sync.html">Open →</a>
+        </div>
+        <div class="card">
+          <h3>Threat model</h3>
+          <p>CDN attack surface</p>
+          <a class="card-link" href="pages/fast-sync-threat-model.html">Open →</a>
+        </div>
+        <div class="card">
+          <h3>Diagrams</h3>
+          <p>Architecture art</p>
+          <a class="card-link" href="pages/diagrams.html">Open →</a>
+        </div>
+      </div>
+
+      <div class="footer">
+        Dogecoin GPENode · public operator documentation · no host secrets
+      </div>
+    </main>
+  </div>
+  <script src="assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Profile A — Fast Sync / dump producer (lean)
+# Copy to datadir as dogecoin.conf — never commit real rpcpassword.
+
+# --- network ---
+listen=1
+server=1
+txindex=0
+
+# Disk-bounded tip (MiB; dogecoind 1.14.x requires prune >= 2200 when pruning)
+prune=5500
+dbcache=1024
+maxmempool=50
+maxconnections=32
+
+# --- RPC (localhost only) ---
+rpcuser=CHANGE_ME
+rpcpassword=CHANGE_ME_LONG_RANDOM
+rpcallowip=127.0.0.1
+rpcbind=127.0.0.1
+
+# --- wallet off (dump-only) ---
+disablewallet=1
+
+# --- logging ---
+printtoconsole=0

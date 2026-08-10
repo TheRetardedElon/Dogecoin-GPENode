@@ -1,0 +1,28 @@
+# Profile B — Settlement host (GPE merchant RPC + optional dump)
+# Copy to datadir as dogecoin.conf — never commit real rpcpassword.
+
+# --- network ---
+listen=1
+server=1
+txindex=0
+
+prune=5500
+dbcache=512
+maxmempool=50
+maxconnections=40
+
+# --- RPC (localhost only; tunnel/VPC for GPE app) ---
+rpcuser=CHANGE_ME
+rpcpassword=CHANGE_ME_LONG_RANDOM
+rpcallowip=127.0.0.1
+rpcbind=127.0.0.1
+# Private LAN only if needed:
+# rpcallowip=10.0.0.0/8
+# rpcbind=0.0.0.0
+# firewall to GPE app IP only — never public internet
+
+# --- wallet on (settlement) ---
+# disablewallet=0   # default: wallet enabled when not set
+
+# --- logging ---
+printtoconsole=0

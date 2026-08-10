@@ -1,0 +1,17 @@
+{
+  "network": "main",
+  "hostname": "sync.doge.gopastearth.com",
+  "url": "https://sync.doge.gopastearth.com/utxo-6324519-EXAMPLE.dat",
+  "urls": [
+    "https://sync.doge.gopastearth.com/utxo-6324519-EXAMPLE.dat"
+  ],
+  "filename": "utxo-6324519-EXAMPLE.dat",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "bytes": 0,
+  "blocks": 6324519,
+  "bestblock": "0000000000000000000000000000000000000000000000000000000000000000",
+  "hash_serialized": "replace-with-dumptxoutset-hash",
+  "created_utc": "2026-08-10T00:00:00Z",
+  "producer": "gpenode-operator",
+  "notes": "Example only. Clients verify sha256 fail-closed; activation needs mapAssumeutxo."
+}

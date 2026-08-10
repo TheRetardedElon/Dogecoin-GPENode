@@ -1,0 +1,18 @@
+[Unit]
+Description=Dogecoin UTXO snapshot dump (GPENode Fast Sync)
+After=network-online.target dogecoind.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Install kit to /opt/gpe-deploy on the dump node
+ExecStart=/opt/gpe-deploy/make_utxo_snapshot.sh
+# Optional: push after dump (set CDN_TARGET in environment file)
+# EnvironmentFile=-/etc/dogecoin/snapshot-publish.env
+# ExecStartPost=/opt/gpe-deploy/publish_snapshots.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

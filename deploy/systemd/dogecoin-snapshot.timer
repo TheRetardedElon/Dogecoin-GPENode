@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule Dogecoin UTXO snapshot dump (GPENode)
+
+[Timer]
+# Daily at 06:15 UTC — adjust for your dump window
+OnCalendar=*-*-* 06:15:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

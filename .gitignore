@@ -1,0 +1,32 @@
+# Secrets — never commit
+serverdetails.txt
+**/serverdetails.txt
+.env
+.env.*
+local/
+*.pem
+id_ed25519*
+id_rsa*
+*.cookie
+wallet.dat
+dogecoin.conf
+!deploy/dogecoin.conf.example
+!deploy/conf/*.example
+
+# Build artifacts
+gpenode-ops/gpenode-ops
+gpenode-ops/gpenode-ops.exe
+out/
+*.exe
+*.o
+*.a
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+
+# Large binaries (build or stage separately)
+**/dogecoind
+**/dogecoin-cli
+smoke-run/

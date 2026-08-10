@@ -17,36 +17,46 @@ Public CDN example (GPE): `https://sync.doge.gopastearth.com/`
 
 ## Quick start
 
-### 1. Build headless daemon (Linux)
+### Easiest: download a headless release (recommended)
 
-From a full Core Pro source tree (e.g. [Dogecoin-Takeback](https://github.com/TheRetardedElon/Dogecoin-Takeback)):
+Prebuilt **Linux x86_64** packages ship on GitHub Releases:
+
+**https://github.com/TheRetardedElon/Dogecoin-GPENode/releases**
 
 ```bash
-# example — see deploy/build-dump-daemon.sh
+# example asset name
+tar -xzf dogecoin-gpenode-linux-x86_64-*.tar.gz
+cd dogecoin-gpenode-linux-x86_64-*
+sudo bash install.sh
+# systemd unit should set Environment=LD_LIBRARY_PATH=/opt/dogecoin-pro/lib
+```
+
+Contents: `dogecoind` + `dogecoin-cli` (no Qt, dump RPCs) · `gpenode-ops` · bundled libs · `deploy/` scripts.
+
+Always verify the published `.sha256` file.
+
+### Or build from source
+
+From a full Core Pro tree (e.g. [Dogecoin-Takeback](https://github.com/TheRetardedElon/Dogecoin-Takeback)):
+
+```bash
+# see deploy/build-dump-daemon.sh
 ./configure --without-gui --disable-tests --disable-bench --with-incompatible-bdb
 make -j$(nproc) src/dogecoind src/dogecoin-cli
 ```
 
-Install with `deploy/install_custom_dogecoind.sh` (bundle Boost/miniupnpc libs if you cross-distro build).
-
-### 2. Build ops CLI
+Ops CLI only:
 
 ```bash
-cd gpenode-ops
-bash build-linux.sh          # Linux / WSL
-# or: powershell -File build-windows.ps1
+cd gpenode-ops && bash build-linux.sh
 ```
 
-### 3. On the dump node
+### On the dump node (after install)
 
 ```bash
-sudo mkdir -p /opt/gpe-deploy /opt/gpenode-ops/bin
-sudo cp -a deploy/* /opt/gpe-deploy/
-sudo install -m 755 gpenode-ops /opt/gpenode-ops/bin/gpenode-ops
-
 export DOGECOIN_CLI=/opt/dogecoin-pro/bin/dogecoin-cli
 export DOGECOIN_DATADIR=/path/to/datadir
-export LD_LIBRARY_PATH=/opt/dogecoin-pro/lib   # if using bundled libs
+export LD_LIBRARY_PATH=/opt/dogecoin-pro/lib
 export SNAP_SCRIPT=/opt/gpe-deploy/make_utxo_snapshot.sh
 
 /opt/gpenode-ops/bin/gpenode-ops status

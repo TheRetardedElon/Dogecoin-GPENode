@@ -5,7 +5,13 @@ set -euo pipefail
 
 DATADIR="$(cat /etc/dogecoin/datadir.path 2>/dev/null || echo /mnt/gpedogecloud/dogecoin)"
 OUTDIR="${OUTDIR:-/mnt/gpedogecloud/snapshots}"
-CLI=(sudo -u dogecoin dogecoin-cli -datadir="${DATADIR}")
+export LD_LIBRARY_PATH="/opt/dogecoin-pro/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# Prefer Core Pro install path; fall back to PATH
+CLI_BIN="$(command -v dogecoin-cli 2>/dev/null || true)"
+if [[ -x /opt/dogecoin-pro/bin/dogecoin-cli ]]; then
+  CLI_BIN=/opt/dogecoin-pro/bin/dogecoin-cli
+fi
+CLI=(sudo -u dogecoin env LD_LIBRARY_PATH="${LD_LIBRARY_PATH}" "${CLI_BIN}" -datadir="${DATADIR}")
 
 mkdir -p "${OUTDIR}"
 chmod 755 "${OUTDIR}"
@@ -110,9 +116,19 @@ meta = {
   "bestblock": dump.get("base_hash") or os.environ["SNAP_BEST"],
   "hash_serialized": dump.get("hash_serialized") or dump.get("txoutset_hash") or dump.get("coins_hash"),
   "created_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-  "producer": "gpenode-operator",
+  "producer": os.environ.get("SNAPSHOT_PRODUCER", "gpenode-operator"),
   "notes": "Pruned node UTXO dump for Fast Sync; clients verify sha256 fail-closed. Mesh M2: append mirror URLs to urls[].",
 }
+# Preserve/extend urls[] for mesh M2 if SNAPSHOT_MIRROR_URLS is set (comma-separated)
+extra = os.environ.get("SNAPSHOT_MIRROR_URLS", "").strip()
+if extra:
+    mirrors = [u.strip() for u in extra.split(",") if u.strip()]
+    seen = set(meta["urls"])
+    for u in mirrors:
+        if u not in seen:
+            meta["urls"].append(u)
+            seen.add(u)
+
 path = out / "latest.json"
 path.write_text(json.dumps(meta, indent=2) + "\n")
 path.chmod(0o644)

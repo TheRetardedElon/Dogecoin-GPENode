@@ -23,32 +23,39 @@ Optional later: tray icon + operator TUI over localhost RPC (sugar). **Not** req
 
 Headless = **packaging + process model**, not a protocol fork.
 
-## Architecture (v1)
+## Architecture (v1 — shipping)
 
 ```text
 Windows Service: "DogecoinGPENode"
-  ImagePath → dogecoind.exe -datadir=... -conf=...
-  Restart on failure
-  Runs as LocalService or dedicated user (configurable)
+  ImagePath → gpenode-ops.exe service-run -dogecoind=... -datadir=... -conf=...
+  (dogecoind is NOT a native SCM service; wrapper supervises it)
+  Restart on failure (SCM recovery)
 
 Local only:
   RPC 127.0.0.1
   Optional P2P listen for full node duty
 
-Operator:
-  dogecoin-cli.exe  OR  gpenode-ops.exe (when ported)
+Operator CLI:
+  gpenode-ops.exe status | service | dump | verify-cdn
+  dogecoin-cli.exe
   PowerShell install/uninstall/status scripts
 ```
 
-## Architecture (v2 — optional sugar)
+## Architecture (v2 / W3 — tray + TUI)
 
 ```text
-Service: dogecoind (unchanged)
-Tray:    gpenode-tray.exe  (session process)
-TUI:     gpenode-tui.exe   (localhost RPC, Grok-Build-like UX)
+Service: gpenode-ops service-run → dogecoind  (unchanged)
+Tray:    gpenode-tray.exe  (session process, dogecoin.ico)
+TUI:     later — richer console UX over localhost RPC
 ```
 
 Tray/TUI **never** contain consensus logic.
+
+### Tray menu (now)
+
+- Tooltip phases: OFFLINE / INIT / IBD / SYNCED  
+- Refresh status · open status window · data folder · conf  
+- Start/stop service (may need Admin) · Quit tray (service keeps running)
 
 ## Build source
 
@@ -77,10 +84,12 @@ dogecoin-gpenode-win64-<ver>.zip
 
 | Phase | Deliverable | Status |
 |-------|-------------|--------|
-| **W0** | Plan + scripts (service install around existing `dogecoind.exe`) | **Now** |
-| **W1** | Package zip from win64 headless build; smoke install on a Windows box | Next |
+| **W0** | Plan + scripts (service install) | **Done** |
+| **W1** | win64 zip + NSIS setup on GitHub Releases; service smoke | **Done** |
 | **W2** | Scheduled dump task (Windows Task Scheduler) + optional publish | Later |
-| **W3** | Tray + operator TUI (localhost RPC only) | Later |
+| **W3a** | Operator CLI phases + `gpenode-ops service` | **Now** |
+| **W3b** | Tray icon (`gpenode-tray`) + product icon | **Now** |
+| **W3c** | Richer TUI (optional) | Later |
 
 ## Failure / recovery (“never die” ops)
 

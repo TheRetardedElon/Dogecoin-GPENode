@@ -73,17 +73,39 @@ if (-not $ConfFile) {
 $ConfFile = [System.IO.Path]::GetFullPath($ConfFile)
 
 if (-not (Test-Path $ConfFile)) {
+    # Unique password per machine/install — never a shared default
+    $writer = Join-Path $PSScriptRoot "write-install-conf.ps1"
+    $gen = Join-Path $PSScriptRoot "gen-rpc-password.ps1"
     $example = Join-Path $PSScriptRoot "conf\dogecoin.$Profile.conf.example"
     if (-not (Test-Path $example)) {
         $example = Join-Path $PSScriptRoot "conf\dogecoin.dump.conf.example"
     }
-    if (Test-Path $example) {
-        Copy-Item $example $ConfFile -Force
-        Write-Info "Wrote conf from $example"
-        Write-Host "  EDIT $ConfFile - set a strong rpcpassword before mainnet funds." -ForegroundColor Yellow
+    $pass = $null
+    if (Test-Path $gen) {
+        $pass = (& powershell -NoProfile -ExecutionPolicy Bypass -File $gen).Trim()
+    }
+    if (-not $pass) {
+        $bytes = New-Object byte[] 28
+        [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+        $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        $pass = -join ($bytes | ForEach-Object { $chars[$_ % 62] })
+    }
+    if (Test-Path $writer) {
+        $exArg = @()
+        if (Test-Path $example) { $exArg = @("-ExampleConf", $example) }
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $writer `
+            -DataDir $DataDir -RpcPassword $pass -RpcUser "gpenode" -Profile $Profile @exArg
+        Write-Info "Wrote conf with unique rpcpassword"
+        Write-Host "  Credentials: $(Join-Path $DataDir 'RPC-CREDENTIALS.txt')" -ForegroundColor Yellow
+    } elseif (Test-Path $example) {
+        $text = Get-Content $example -Raw
+        $text = $text -replace 'rpcpassword=.*', "rpcpassword=$pass"
+        if ($text -notmatch 'rpcpassword=') { $text += "`nrpcpassword=$pass`n" }
+        Set-Content -Path $ConfFile -Value $text -Encoding UTF8
+        Write-Info "Wrote conf from example with unique rpcpassword"
     } else {
         @(
-            "# Dogecoin GPENode headless - EDIT ME"
+            "# Dogecoin GPENode headless — unique credentials"
             "server=1"
             "listen=1"
             "txindex=0"
@@ -91,10 +113,11 @@ if (-not (Test-Path $ConfFile)) {
             "rpcbind=127.0.0.1"
             "rpcallowip=127.0.0.1"
             "rpcuser=gpenode"
-            "rpcpassword=CHANGE_ME_LONG_RANDOM"
+            "rpcpassword=$pass"
             "printtoconsole=0"
+            "disablewallet=1"
         ) | Set-Content -Path $ConfFile -Encoding ASCII
-        Write-Info "Wrote minimal conf at $ConfFile - EDIT rpcpassword"
+        Write-Info "Wrote minimal conf with unique rpcpassword"
     }
 }
 

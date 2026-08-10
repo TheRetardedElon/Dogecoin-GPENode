@@ -1,53 +1,46 @@
 # gpenode-ops
 
-**Operator glue only.** Single static Go binary next to headless `dogecoind`.
+Operator glue for **Dogecoin GPENode**. Talks to headless `dogecoind` over localhost RPC / `dogecoin-cli`.
 
-- Does **not** validate blocks or implement Dogecoin consensus  
-- Speaks **localhost RPC** / `dogecoin-cli` and wraps `deploy/*.sh`  
-- Architecture: `../deploy/ARCHITECTURE.md`
-
-## Build
-
-```bash
-# Linux (WSL/node)
-bash build-linux.sh
-
-# Windows
-powershell -ExecutionPolicy Bypass -File build-windows.ps1
-```
-
-Staged package (both OS binaries + deploy scripts):
-
-```bash
-bash ../deploy/stage-ops-binaries.sh
-# → out/gpenode-ops/
-```
-
-Live check (no node required):
-
-```bash
-./gpenode-ops verify-cdn
-# → blocks / sha256 / url from sync.doge.gopastearth.com
-```
+**Does not implement consensus.**
 
 ## Commands
 
-```bash
-export DOGECOIN_DATADIR=/mnt/gpedogecloud/dogecoin
-export DOGECOIN_CLI=/opt/dogecoin-pro/bin/dogecoin-cli
+| Command | Role |
+|---------|------|
+| `status` | Phase + tip (`OFFLINE` / `INIT` / `IBD` / `SYNCED`) |
+| `status -json` | Machine-readable summary |
+| `dump` | Bash snapshot script, or native `dumptxoutset` (`-native`) |
+| `publish` | CDN publish script |
+| `verify-cdn` | Fetch `latest.json` |
+| `service status\|start\|stop\|restart` | Windows SCM helpers |
+| `service-run` | Windows service host (supervises dogecoind) |
+| `version` | Binary version |
 
-./gpenode-ops status      # tip + dumptxoutset present?
-./gpenode-ops dump        # make_utxo_snapshot.sh
-./gpenode-ops publish     # needs CDN_TARGET for push
-./gpenode-ops verify-cdn  # GET latest.json
+## Windows defaults
+
+When env vars are unset:
+
+- CLI/daemon: `%ProgramFiles%\DogecoinGPENode\bin\`
+- datadir: `%ProgramData%\DogecoinGPENode`
+
+```powershell
+gpenode-ops status
+gpenode-ops service status
+# Admin may be required:
+gpenode-ops service start
 ```
 
-## Pairing
+## Build
 
-| Piece | Role |
-|-------|------|
-| `dogecoind` (C++, `--without-gui`) | Consensus / UTXO / dump RPC |
-| `gpenode-ops` (Go) | Schedule triggers, publish, health |
-| CDN | Static files only |
+```powershell
+# Windows
+go build -ldflags="-s -w" -o gpenode-ops.exe .
+# or
+powershell -File .\build-windows.ps1
+```
 
-Profile A/B conf: `../deploy/conf/`.
+```bash
+# Linux
+bash build-linux.sh
+```

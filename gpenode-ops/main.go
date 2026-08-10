@@ -7,11 +7,20 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	opsVersion         = "0.3.0"
+	defaultServiceName = "DogecoinGPENode"
 )
 
 func main() {
@@ -28,10 +37,12 @@ func main() {
 		cmdPublish(os.Args[2:])
 	case "verify-cdn":
 		cmdVerifyCDN(os.Args[2:])
+	case "service":
+		cmdService(os.Args[2:])
 	case "service-run":
 		cmdServiceRun(os.Args[2:])
 	case "version":
-		fmt.Println("gpenode-ops 0.2.0 (glue only; consensus is dogecoind)")
+		fmt.Printf("gpenode-ops %s (glue only; consensus is dogecoind)\n", opsVersion)
 	case "help", "-h", "--help":
 		usage()
 	default:
@@ -45,29 +56,38 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `gpenode-ops — GPENode operator glue (RPC only; no consensus)
 
 Commands:
-  status       Chain tip / IBD / dump RPC presence
-  dump         Run make_utxo_snapshot.sh (or dogecoin-cli dumptxoutset)
-  publish      Run publish_snapshots.sh (CDN_TARGET required for push)
+  status       Phase + chain tip / IBD / dump RPC presence
+  dump         dumptxoutset (native) or make_utxo_snapshot.sh
+  publish      Run publish_snapshots.sh (CDN_TARGET for push)
   verify-cdn   Fetch latest.json and print pointer fields
-  service-run  Windows only: SCM service host that supervises dogecoind
+  service      Windows: status|start|stop|restart [ServiceName]
+  service-run  Windows only: SCM host that supervises dogecoind
   version      Print ops binary version
 
 Env:
-  DOGECOIN_CLI   path to dogecoin-cli (default: dogecoin-cli)
+  DOGECOIN_CLI      path to dogecoin-cli
   DOGECOIN_DATADIR  -datadir for cli
-  SNAP_SCRIPT    path to make_utxo_snapshot.sh
-  PUBLISH_SCRIPT path to publish_snapshots.sh
-  CDN_LATEST_URL default https://sync.doge.gopastearth.com/latest.json
+  DOGECOIND         path to dogecoind (service-run / discovery)
+  SNAP_SCRIPT       path to make_utxo_snapshot.sh
+  PUBLISH_SCRIPT    path to publish_snapshots.sh
+  CDN_LATEST_URL    default https://sync.doge.gopastearth.com/latest.json
 
-Windows service install uses:
-  gpenode-ops service-run -dogecoind=... -datadir=... -conf=...
+Windows defaults (when env unset):
+  CLI/daemon: %%ProgramFiles%%\DogecoinGPENode\bin\
+  datadir:    %%ProgramData%%\DogecoinGPENode
+
+Phases (status):
+  OFFLINE  service/process down or RPC unreachable
+  INIT     RPC -28 (loading block index / verifying)
+  IBD      initial block download
+  SYNCED   caught up (or nearly)
 `)
 }
 
 func cliBase() []string {
-	bin := env("DOGECOIN_CLI", "dogecoin-cli")
+	bin := resolveCLI()
 	args := []string{bin}
-	if d := os.Getenv("DOGECOIN_DATADIR"); d != "" {
+	if d := resolveDataDir(); d != "" {
 		args = append(args, "-datadir="+d)
 	}
 	return args
@@ -82,7 +102,7 @@ func env(k, def string) string {
 
 func runCLI(rpcArgs ...string) (string, error) {
 	base := cliBase()
-	args := append(base[1:], rpcArgs...)
+	args := append(append([]string{}, base[1:]...), rpcArgs...)
 	cmd := exec.Command(base[0], args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
@@ -90,58 +110,196 @@ func runCLI(rpcArgs ...string) (string, error) {
 
 func cmdStatus(args []string) {
 	fs := flag.NewFlagSet("status", flag.ExitOnError)
+	jsonOut := fs.Bool("json", false, "machine-readable JSON summary")
 	_ = fs.Parse(args)
 
-	fmt.Println("==> gpenode-ops status")
-	fmt.Println("time", time.Now().UTC().Format(time.RFC3339))
+	cli := resolveCLI()
+	datadir := resolveDataDir()
+	daemon := resolveDogecoind()
+
+	type summary struct {
+		Time     string `json:"time"`
+		Phase    string `json:"phase"`
+		Service  string `json:"service,omitempty"`
+		CLI      string `json:"cli"`
+		DataDir  string `json:"datadir"`
+		Dogecoind string `json:"dogecoind,omitempty"`
+		Chain    string `json:"chain,omitempty"`
+		Blocks   string `json:"blocks,omitempty"`
+		Headers  string `json:"headers,omitempty"`
+		IBD      string `json:"ibd,omitempty"`
+		Progress string `json:"progress,omitempty"`
+		DumpRPC  string `json:"dumptxoutset,omitempty"`
+		Message  string `json:"message,omitempty"`
+	}
+	sum := summary{
+		Time:      time.Now().UTC().Format(time.RFC3339),
+		CLI:       cli,
+		DataDir:   datadir,
+		Dogecoind: daemon,
+	}
+	if runtime.GOOS == "windows" {
+		sum.Service = serviceState(defaultServiceName)
+	}
+
+	printHuman := func() {
+		if *jsonOut {
+			return
+		}
+		fmt.Println("==> gpenode-ops status")
+		fmt.Println("time", sum.Time)
+		fmt.Println("cli", sum.CLI)
+		fmt.Println("datadir", sum.DataDir)
+		if sum.Service != "" {
+			fmt.Println("service", sum.Service)
+		}
+	}
+	printHuman()
 
 	out, err := runCLI("getblockchaininfo")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "getblockchaininfo failed: %v\n%s\n", err, out)
+		if isRPCWarmup(out) {
+			sum.Phase = "INIT"
+			sum.Message = strings.TrimSpace(out)
+			if !*jsonOut {
+				fmt.Println("phase INIT")
+				fmt.Println("rpc warmup: node is loading block index (like GUI splash)")
+				fmt.Println("wait a minute and re-run: gpenode-ops status")
+				if sum.Service == "RUNNING" || sum.Service == "" {
+					fmt.Println("(service/process looks up — this is normal)")
+				}
+			} else {
+				enc, _ := json.MarshalIndent(sum, "", "  ")
+				fmt.Println(string(enc))
+			}
+			os.Exit(0)
+		}
+		sum.Phase = "OFFLINE"
+		sum.Message = strings.TrimSpace(out)
+		if sum.Message == "" {
+			sum.Message = err.Error()
+		}
+		if !*jsonOut {
+			fmt.Println("phase OFFLINE")
+			fmt.Fprintf(os.Stderr, "getblockchaininfo failed: %v\n%s\n", err, out)
+			if runtime.GOOS == "windows" && sum.Service != "RUNNING" {
+				fmt.Fprintln(os.Stderr, "hint: gpenode-ops service start   (Admin if needed)")
+			}
+		} else {
+			enc, _ := json.MarshalIndent(sum, "", "  ")
+			fmt.Println(string(enc))
+		}
 		os.Exit(1)
 	}
+
 	var info map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(out), &info); err != nil {
-		fmt.Print(out)
-	} else {
-		get := func(k string) string {
-			raw, ok := info[k]
-			if !ok {
-				return ""
-			}
-			s := strings.TrimSpace(string(raw))
-			return strings.Trim(s, `"`)
+	get := func(k string) string {
+		raw, ok := info[k]
+		if !ok {
+			return ""
 		}
-		fmt.Printf("chain=%s blocks=%s headers=%s ibd=%s progress=%s\n",
-			get("chain"), get("blocks"), get("headers"),
-			get("initialblockdownload"), get("verificationprogress"))
+		s := strings.TrimSpace(string(raw))
+		return strings.Trim(s, `"`)
+	}
+	if err := json.Unmarshal([]byte(out), &info); err != nil {
+		if !*jsonOut {
+			fmt.Print(out)
+		}
+		sum.Phase = "UNKNOWN"
+	} else {
+		sum.Chain = get("chain")
+		sum.Blocks = get("blocks")
+		sum.Headers = get("headers")
+		sum.IBD = get("initialblockdownload")
+		sum.Progress = get("verificationprogress")
+		sum.Phase = phaseFromChain(sum.IBD, sum.Blocks, sum.Headers, sum.Progress)
+		if !*jsonOut {
+			fmt.Printf("phase %s\n", sum.Phase)
+			fmt.Printf("chain=%s blocks=%s headers=%s ibd=%s progress=%s\n",
+				sum.Chain, sum.Blocks, sum.Headers, sum.IBD, sum.Progress)
+		}
 	}
 
 	help, err := runCLI("help", "dumptxoutset")
 	if err != nil || strings.Contains(strings.ToLower(help), "unknown command") {
-		fmt.Println("dumptxoutset: MISSING (need custom Core Pro daemon)")
+		sum.DumpRPC = "MISSING"
+		if !*jsonOut {
+			fmt.Println("dumptxoutset: MISSING (need Core Pro / GPENode dump daemon)")
+		}
+		if *jsonOut {
+			enc, _ := json.MarshalIndent(sum, "", "  ")
+			fmt.Println(string(enc))
+		}
 		os.Exit(2)
 	}
-	fmt.Println("dumptxoutset: OK")
+	sum.DumpRPC = "OK"
+	if !*jsonOut {
+		fmt.Println("dumptxoutset: OK")
+	}
+	if *jsonOut {
+		enc, _ := json.MarshalIndent(sum, "", "  ")
+		fmt.Println(string(enc))
+	}
+}
+
+func phaseFromChain(ibd, blocks, headers, progress string) string {
+	if strings.EqualFold(ibd, "true") {
+		return "IBD"
+	}
+	// nearly caught up
+	b, _ := strconv.ParseInt(blocks, 10, 64)
+	h, _ := strconv.ParseInt(headers, 10, 64)
+	if h > 0 && b > 0 && (h-b) <= 2 {
+		return "SYNCED"
+	}
+	p, _ := strconv.ParseFloat(progress, 64)
+	if p >= 0.999 {
+		return "SYNCED"
+	}
+	if b > 0 {
+		return "IBD"
+	}
+	return "UNKNOWN"
 }
 
 func cmdDump(args []string) {
 	fs := flag.NewFlagSet("dump", flag.ExitOnError)
+	outPath := fs.String("out", "", "output path for dumptxoutset (default: datadir/snapshots/utxo-TIMESTAMP.dat)")
+	native := fs.Bool("native", false, "force dogecoin-cli dumptxoutset (skip bash script)")
 	_ = fs.Parse(args)
 
 	script := env("SNAP_SCRIPT", defaultDeployScript("make_utxo_snapshot.sh"))
-	if _, err := os.Stat(script); err != nil {
-		fmt.Fprintf(os.Stderr, "snapshot script not found: %s\nset SNAP_SCRIPT=\n", script)
+	if !*native {
+		if _, err := os.Stat(script); err == nil {
+			fmt.Println("==> dump via", script)
+			cmd := exec.Command("bash", script)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "dump failed: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		}
+	}
+
+	// Native path (Windows-friendly)
+	datadir := resolveDataDir()
+	path := *outPath
+	if path == "" {
+		snapDir := filepath.Join(datadir, "snapshots")
+		_ = os.MkdirAll(snapDir, 0o755)
+		path = filepath.Join(snapDir, fmt.Sprintf("utxo-%s.dat", time.Now().UTC().Format("20060102T150405Z")))
+	}
+	fmt.Println("==> dump native dumptxoutset")
+	fmt.Println("out", path)
+	out, err := runCLI("dumptxoutset", path)
+	fmt.Print(out)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "dumptxoutset failed: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println("==> dump via", script)
-	cmd := exec.Command("bash", script)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "dump failed: %v\n", err)
-		os.Exit(1)
-	}
+	fmt.Println("dump OK")
 }
 
 func cmdPublish(args []string) {
@@ -172,19 +330,39 @@ func cmdVerifyCDN(args []string) {
 	_ = fs.Parse(args)
 	url := env("CDN_LATEST_URL", "https://sync.doge.gopastearth.com/latest.json")
 	fmt.Println("==> GET", url)
-	// curl keeps deps zero; ops host always has it
-	cmd := exec.Command("curl", "-fsS", url)
-	out, err := cmd.CombinedOutput()
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "fetch failed: %v\n%s\n", err, out)
+		// fallback curl for minimal envs
+		cmd := exec.Command("curl", "-fsS", url)
+		out, err2 := cmd.CombinedOutput()
+		if err2 != nil {
+			fmt.Fprintf(os.Stderr, "fetch failed: %v / curl: %v\n%s\n", err, err2, out)
+			os.Exit(1)
+		}
+		printCDNMeta(out)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		fmt.Fprintf(os.Stderr, "HTTP %s\n", resp.Status)
 		os.Exit(1)
 	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "read failed: %v\n", err)
+		os.Exit(1)
+	}
+	printCDNMeta(body)
+}
+
+func printCDNMeta(out []byte) {
 	var meta map[string]json.RawMessage
 	if err := json.Unmarshal(out, &meta); err != nil {
 		fmt.Print(string(out))
 		return
 	}
-	// Prefer raw JSON text so large ints are not scientific notation.
 	for _, k := range []string{"blocks", "sha256", "bytes", "url", "hash_serialized", "filename", "created_utc", "producer"} {
 		if raw, ok := meta[k]; ok {
 			s := strings.TrimSpace(string(raw))
@@ -204,14 +382,18 @@ func cmdVerifyCDN(args []string) {
 }
 
 func defaultDeployScript(name string) string {
-	// Prefer /opt/gpe-deploy on node; else relative to this module's sibling deploy/
 	candidates := []string{
 		filepath.Join("/opt/gpe-deploy", name),
 		filepath.Join("deploy", name),
 		filepath.Join("..", "deploy", name),
 	}
 	if exe, err := os.Executable(); err == nil {
-		candidates = append(candidates, filepath.Join(filepath.Dir(exe), name))
+		dir := filepath.Dir(exe)
+		candidates = append(candidates,
+			filepath.Join(dir, name),
+			filepath.Join(dir, "..", "deploy", name),
+			filepath.Join(dir, "deploy", name),
+		)
 	}
 	for _, c := range candidates {
 		if st, err := os.Stat(c); err == nil && !st.IsDir() {

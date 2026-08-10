@@ -68,15 +68,26 @@ BrandingText "Dogecoin GPENode — same mainnet consensus · no Qt GUI"
 !define MUI_DIRECTORYPAGE_TEXT_TOP "Setup will install Dogecoin GPENode Headless in the following folder.$\r$\n$\r$\nNode data (chainstate/wallet) defaults to ProgramData and is configured after install."
 
 !define MUI_FINISHPAGE_TITLE "Installation complete"
-!define MUI_FINISHPAGE_TEXT "Dogecoin GPENode Headless has been installed.$\r$\n$\r$\nEdit conf (rpcpassword) before using real funds.$\r$\nRPC is bound to 127.0.0.1 by default."
+!define MUI_FINISHPAGE_TEXT "Dogecoin GPENode Headless has been installed.$\r$\n$\r$\nYour unique RPC password is in the data folder:$\r$\n  RPC-CREDENTIALS.txt  and  dogecoin.conf$\r$\nRPC is bound to 127.0.0.1 by default."
 
 Var StartMenuFolder
 Var DataDir
+Var RpcPassword
+Var RpcUser
+Var RpcAckCheckbox
+Var RpcDlg
+Var RpcPassEdit
+
+; After Vars so $RpcUser / $RpcPassword resolve correctly
+!include "nsis-rpc-credentials.nsh"
+; Extractable during .onInit for crypto password generation
+ReserveFile "gen-rpc-password.ps1"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "LICENSE.txt"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
+Page custom RpcCredentialsPage RpcCredentialsPageLeave
 !insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
@@ -107,6 +118,8 @@ Function .onInit
     StrCpy $0 "$WINDIR\..\ProgramData"
   ${EndIf}
   StrCpy $DataDir "$0\DogecoinGPENode"
+  ; Unique password for THIS install (never CHANGE_ME / shared default)
+  Call GenerateRpcPassword
 FunctionEnd
 
 ; --- Required: binaries ---
@@ -120,22 +133,32 @@ Section "Core binaries (required)" SecCore
   File "install-service.ps1"
   File "uninstall-service.ps1"
   File "status-service.ps1"
+  File "write-install-conf.ps1"
+  File "gen-rpc-password.ps1"
 
   SetOutPath "$INSTDIR\bin"
   File "${BIN_DIR}\dogecoind.exe"
   File "${BIN_DIR}\dogecoin-cli.exe"
   File "${BIN_DIR}\gpenode-ops.exe"
+  File "${BIN_DIR}\gpenode-tray.exe"
+  ; Optional TUI
+  IfFileExists "${BIN_DIR}\gpenode-tui.exe" 0 skip_tui
+    File "${BIN_DIR}\gpenode-tui.exe"
+  skip_tui:
 
   SetOutPath "$INSTDIR\conf"
   File "conf\dogecoin.dump.conf.example"
   File "conf\dogecoin.settlement.conf.example"
 
-  ; Default data dir + conf if missing
+  ; Data dir + unique credentials (never shared default password)
   CreateDirectory "$DataDir"
   CreateDirectory "$DataDir\snapshots"
-  IfFileExists "$DataDir\dogecoin.conf" skip_conf
-    CopyFiles /SILENT "$INSTDIR\conf\dogecoin.dump.conf.example" "$DataDir\dogecoin.conf"
-  skip_conf:
+  ; Write conf with installer-generated password (keeps existing conf if present)
+  nsExec::ExecToLog 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\write-install-conf.ps1" -DataDir "$DataDir" -RpcUser "$RpcUser" -RpcPassword "$RpcPassword" -Profile dump -ExampleConf "$INSTDIR\conf\dogecoin.dump.conf.example"'
+  Pop $1
+  DetailPrint "write-install-conf.ps1 exit=$1"
+  WriteRegStr HKLM "${REGKEY}" "RpcUser" "$RpcUser"
+  ; Do NOT store password in registry — only in conf / credentials file
 
   WriteRegStr HKLM "${REGKEY}" "InstallPath" "$INSTDIR"
   WriteRegStr HKLM "${REGKEY}" "DataDir" "$DataDir"
@@ -163,8 +186,19 @@ Section "Core binaries (required)" SecCore
       "$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" \
       "-NoExit -ExecutionPolicy Bypass -File $\"$INSTDIR\status-service.ps1$\" -BinDir $\"$INSTDIR\bin$\"" \
       "$INSTDIR\bin\dogecoind.exe"
+    IfFileExists "$INSTDIR\bin\gpenode-tray.exe" 0 skip_tray_sm
+      CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode Tray.lnk" \
+        "$INSTDIR\bin\gpenode-tray.exe" "" \
+        "$INSTDIR\bin\gpenode-tray.exe"
+    skip_tray_sm:
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Open data folder.lnk" "$DataDir"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Edit dogecoin.conf.lnk" "notepad.exe" "$DataDir\dogecoin.conf"
+    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\RPC credentials.lnk" "notepad.exe" "$DataDir\RPC-CREDENTIALS.txt"
+    IfFileExists "$INSTDIR\bin\gpenode-tui.exe" 0 skip_tui_sm
+      CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode TUI.lnk" \
+        "$WINDIR\System32\cmd.exe" "/c start GPENode $\"$INSTDIR\bin\gpenode-tui.exe$\"" \
+        "$INSTDIR\bin\dogecoind.exe"
+    skip_tui_sm:
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
@@ -190,10 +224,21 @@ Section "Desktop status shortcut" SecDesktop
     "$INSTDIR\bin\dogecoind.exe"
 SectionEnd
 
+; --- Optional: start tray with login ---
+Section "Start tray icon with Windows" SecTray
+  IfFileExists "$INSTDIR\bin\gpenode-tray.exe" 0 skip_tray_run
+    ; Current-user Run key (session tray; does not require Admin elevation for the tray itself)
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "DogecoinGPENodeTray" '"$INSTDIR\bin\gpenode-tray.exe"'
+    ; Launch once after install
+    Exec '"$INSTDIR\bin\gpenode-tray.exe"'
+  skip_tray_run:
+SectionEnd
+
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} "dogecoind.exe, dogecoin-cli.exe, conf examples, and management scripts (required)."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecService} "Register dogecoind as a Windows Service (auto-start, restart on failure). RPC stays on 127.0.0.1."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} "dogecoind, dogecoin-cli, gpenode-ops (service host + CLI), conf examples, scripts."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecService} "Register gpenode-ops service-run as Windows Service (auto-start, restart on failure). RPC stays on 127.0.0.1."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Add a desktop shortcut that opens a status PowerShell window."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecTray} "Launch GPENode tray icon at login (tooltip: INIT/IBD/SYNCED). Quitting tray does not stop the service."
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Function LaunchStatus
@@ -215,6 +260,7 @@ Section "Uninstall"
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
   RMDir /r "$SMPROGRAMS\$StartMenuFolder"
   Delete "$DESKTOP\Dogecoin GPENode Status.lnk"
+  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "DogecoinGPENodeTray"
 
   Delete "$INSTDIR\Uninstall.exe"
   Delete "$INSTDIR\README.txt"

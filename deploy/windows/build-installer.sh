@@ -36,9 +36,31 @@ else
   echo "ERROR: missing gpenode-ops.exe (Windows service wrapper)"
   exit 1
 fi
+# Tray icon (W3)
+if [[ -f "${BIN_DIR}/gpenode-tray.exe" ]]; then
+  cp -a "${BIN_DIR}/gpenode-tray.exe" "${STAGE}/bin/"
+elif [[ -f /mnt/c/dogedevGPEnode/gpenode-tray/gpenode-tray.exe ]]; then
+  cp -a /mnt/c/dogedevGPEnode/gpenode-tray/gpenode-tray.exe "${STAGE}/bin/"
+elif [[ -f /mnt/c/dogedevGPEnode/out/gpenode-ops/gpenode-tray.exe ]]; then
+  cp -a /mnt/c/dogedevGPEnode/out/gpenode-ops/gpenode-tray.exe "${STAGE}/bin/"
+else
+  echo "ERROR: missing gpenode-tray.exe (build gpenode-tray/build-windows.ps1)"
+  exit 1
+fi
 cp -a "${ROOT}/install-service.ps1" "${ROOT}/uninstall-service.ps1" "${ROOT}/status-service.ps1" "${STAGE}/"
+# Unique RPC password helpers (required)
+[[ -f "${ROOT}/write-install-conf.ps1" ]] || { echo "missing write-install-conf.ps1"; exit 1; }
+[[ -f "${ROOT}/gen-rpc-password.ps1" ]] || { echo "missing gen-rpc-password.ps1"; exit 1; }
+[[ -f "${ROOT}/nsis-rpc-credentials.nsh" ]] || { echo "missing nsis-rpc-credentials.nsh"; exit 1; }
+cp -a "${ROOT}/write-install-conf.ps1" "${ROOT}/gen-rpc-password.ps1" "${ROOT}/nsis-rpc-credentials.nsh" "${STAGE}/"
 cp -a "${ROOT}/conf/"*.example "${STAGE}/conf/"
 cp -a "${ROOT}/setup-gpenode-headless.nsi" "${STAGE}/"
+# Optional TUI
+if [[ -f "${BIN_DIR}/gpenode-tui.exe" ]]; then
+  cp -a "${BIN_DIR}/gpenode-tui.exe" "${STAGE}/bin/"
+elif [[ -f /mnt/c/dogedevGPEnode/gpenode-tui/gpenode-tui.exe ]]; then
+  cp -a /mnt/c/dogedevGPEnode/gpenode-tui/gpenode-tui.exe "${STAGE}/bin/"
+fi
 
 # License + readme for wizard
 if [[ -f /mnt/c/dogedev/COPYING ]]; then
@@ -58,13 +80,15 @@ This package installs a headless Dogecoin node (dogecoind), not the Qt GUI walle
 - Same mainnet consensus as Dogecoin Core Pro
 - Optional Windows Service (auto-start, restart on failure)
 - Service host: gpenode-ops.exe service-run (dogecoind is not a native SCM service)
-- RPC defaults to 127.0.0.1 only - edit conf before using real funds
+- RPC defaults to 127.0.0.1 only
+- UNIQUE rpcpassword generated per install (no shared default)
+  See: %ProgramData%\\DogecoinGPENode\\RPC-CREDENTIALS.txt
 
 Data directory (default):
   %ProgramData%\\DogecoinGPENode
 
 After install:
-  Start Menu -> Dogecoin GPENode -> GPENode Status
+  Start Menu -> Dogecoin GPENode -> GPENode Status / TUI / RPC credentials
   Or: services.msc -> DogecoinGPENode
 
 GitHub: https://github.com/TheRetardedElon/Dogecoin-GPENode

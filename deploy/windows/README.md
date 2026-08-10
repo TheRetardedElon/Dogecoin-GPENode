@@ -58,11 +58,21 @@ Default datadir: `%ProgramData%\DogecoinGPENode`
 - Service restart does not rewrite the chain — datadir is the source of truth  
 - Uninstall without `-RemoveDataDir` keeps wallets/chainstate  
 
+## Operator CLI + tray (W3)
+
+```powershell
+# Phases: OFFLINE | INIT | IBD | SYNCED
+& "C:\Program Files\DogecoinGPENode\bin\gpenode-ops.exe" status
+& "C:\Program Files\DogecoinGPENode\bin\gpenode-ops.exe" service status
+
+# Session tray (does not stop the service when quit)
+& "C:\Program Files\DogecoinGPENode\bin\gpenode-tray.exe"
+```
+
 ## Later phases
 
-- **W1** — Official win64 zip on GitHub Releases (parallel to Linux headless tarball)  
 - **W2** — Task Scheduler dump job (like Linux systemd timer)  
-- **W3** — Tray + operator TUI (localhost RPC only; never consensus)  
+- **W3c** — Richer operator TUI (localhost RPC only; never consensus)  
 
 ## Non-goals
 
@@ -70,21 +80,3 @@ Default datadir: `%ProgramData%\DogecoinGPENode`
 - Replacing Core Pro GUI for merchants  
 - Public RPC  
 - GPE API requirement  
-
-## GUI installer (recommended)
-
-Download **dogecoin-gpenode-*-win64-setup.exe** from GitHub Releases.
-
-Wizard pages: Welcome ? License ? Components ? Install folder ? Progress ? Finish.
-
-Components:
-- **Core binaries** (required) � dogecoind, dogecoin-cli
-- **Install as Windows Service** (optional) � auto-start headless node
-- **Desktop status shortcut** (optional)
-
-Rebuild installer (WSL, after headless binaries exist):
-
-```bash
-./deploy/windows/build-installer.sh
-```
-

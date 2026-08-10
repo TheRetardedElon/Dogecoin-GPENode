@@ -153,6 +153,19 @@ package_headless() {
 
   # Windows service scripts from kit
   local WINKIT="/mnt/c/dogedevGPEnode/deploy/windows"
+  # SCM wrapper required for Windows Service
+  local OPS_WIN=""
+  for c in \
+    "$WINKIT/bin/gpenode-ops.exe" \
+    "/mnt/c/dogedevGPEnode/gpenode-ops/gpenode-ops.exe" \
+    "/mnt/c/dogedevGPEnode/out/gpenode-ops/gpenode-ops-windows-amd64.exe"
+  do
+    if [[ -f "$c" ]]; then OPS_WIN="$c"; break; fi
+  done
+  [[ -n "$OPS_WIN" ]] || { log "ERROR: missing gpenode-ops.exe service wrapper"; exit 1; }
+  cp -a "$OPS_WIN" "$stage/bin/gpenode-ops.exe"
+  cp -a "$OPS_WIN" "$OUT_WIN/gpenode-ops.exe"
+
   cp -a "$WINKIT/install-service.ps1" "$stage/"
   cp -a "$WINKIT/uninstall-service.ps1" "$stage/"
   cp -a "$WINKIT/status-service.ps1" "$stage/"
@@ -160,12 +173,13 @@ package_headless() {
   cp -a "$WINKIT/README.md" "$stage/" 2>/dev/null || true
 
   cat > "$stage/README.txt" <<EOF
-Dogecoin GPENode / Core Pro Headless — Windows x64
+Dogecoin GPENode / Core Pro Headless - Windows x64
 Version: ${VER}
 
 Contents
   bin/dogecoind.exe      Headless node (no Qt)
   bin/dogecoin-cli.exe
+  bin/gpenode-ops.exe    Ops glue + Windows SCM service host
   conf/*.example         Dump / settlement profiles
   install-service.ps1    Windows Service install (Admin)
   uninstall-service.ps1
@@ -175,6 +189,7 @@ Install (elevated PowerShell)
   cd this folder
   powershell -ExecutionPolicy Bypass -File .\\install-service.ps1 -Profile dump -BinDir .\\bin
 
+Service model: gpenode-ops service-run supervises dogecoind (dogecoind is not a native SCM service).
 Same Dogecoin mainnet consensus as Core Pro GUI. No GUI product surface.
 EOF
 

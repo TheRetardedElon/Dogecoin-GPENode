@@ -28,8 +28,10 @@ func main() {
 		cmdPublish(os.Args[2:])
 	case "verify-cdn":
 		cmdVerifyCDN(os.Args[2:])
+	case "service-run":
+		cmdServiceRun(os.Args[2:])
 	case "version":
-		fmt.Println("gpenode-ops 0.1.0 (glue only; consensus is dogecoind)")
+		fmt.Println("gpenode-ops 0.2.0 (glue only; consensus is dogecoind)")
 	case "help", "-h", "--help":
 		usage()
 	default:
@@ -47,6 +49,7 @@ Commands:
   dump         Run make_utxo_snapshot.sh (or dogecoin-cli dumptxoutset)
   publish      Run publish_snapshots.sh (CDN_TARGET required for push)
   verify-cdn   Fetch latest.json and print pointer fields
+  service-run  Windows only: SCM service host that supervises dogecoind
   version      Print ops binary version
 
 Env:
@@ -55,6 +58,9 @@ Env:
   SNAP_SCRIPT    path to make_utxo_snapshot.sh
   PUBLISH_SCRIPT path to publish_snapshots.sh
   CDN_LATEST_URL default https://sync.doge.gopastearth.com/latest.json
+
+Windows service install uses:
+  gpenode-ops service-run -dogecoind=... -datadir=... -conf=...
 `)
 }
 

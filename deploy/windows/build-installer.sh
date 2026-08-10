@@ -25,6 +25,17 @@ rm -rf "${STAGE}"
 mkdir -p "${STAGE}/bin" "${STAGE}/conf" "${OUT_DIR}"
 
 cp -a "${BIN_DIR}/dogecoind.exe" "${BIN_DIR}/dogecoin-cli.exe" "${STAGE}/bin/"
+# SCM wrapper (required for Windows Service — dogecoind is not a native service)
+if [[ -f "${BIN_DIR}/gpenode-ops.exe" ]]; then
+  cp -a "${BIN_DIR}/gpenode-ops.exe" "${STAGE}/bin/"
+elif [[ -f /mnt/c/dogedevGPEnode/gpenode-ops/gpenode-ops.exe ]]; then
+  cp -a /mnt/c/dogedevGPEnode/gpenode-ops/gpenode-ops.exe "${STAGE}/bin/"
+elif [[ -f /mnt/c/dogedevGPEnode/out/gpenode-ops/gpenode-ops-windows-amd64.exe ]]; then
+  cp -a /mnt/c/dogedevGPEnode/out/gpenode-ops/gpenode-ops-windows-amd64.exe "${STAGE}/bin/gpenode-ops.exe"
+else
+  echo "ERROR: missing gpenode-ops.exe (Windows service wrapper)"
+  exit 1
+fi
 cp -a "${ROOT}/install-service.ps1" "${ROOT}/uninstall-service.ps1" "${ROOT}/status-service.ps1" "${STAGE}/"
 cp -a "${ROOT}/conf/"*.example "${STAGE}/conf/"
 cp -a "${ROOT}/setup-gpenode-headless.nsi" "${STAGE}/"
@@ -39,21 +50,22 @@ else
 fi
 
 cat > "${STAGE}/README.txt" <<EOF
-Dogecoin GPENode / Core Pro Headless — Windows x64
+Dogecoin GPENode / Core Pro Headless - Windows x64
 Version: ${VERSION}
 
 This package installs a headless Dogecoin node (dogecoind), not the Qt GUI wallet.
 
-• Same mainnet consensus as Dogecoin Core Pro
-• Optional Windows Service (auto-start, restart on failure)
-• RPC defaults to 127.0.0.1 only — edit conf before using real funds
+- Same mainnet consensus as Dogecoin Core Pro
+- Optional Windows Service (auto-start, restart on failure)
+- Service host: gpenode-ops.exe service-run (dogecoind is not a native SCM service)
+- RPC defaults to 127.0.0.1 only - edit conf before using real funds
 
 Data directory (default):
   %ProgramData%\\DogecoinGPENode
 
 After install:
-  Start Menu → Dogecoin GPENode → GPENode Status
-  Or: services.msc → DogecoinGPENode
+  Start Menu -> Dogecoin GPENode -> GPENode Status
+  Or: services.msc -> DogecoinGPENode
 
 GitHub: https://github.com/TheRetardedElon/Dogecoin-GPENode
 EOF

@@ -19,21 +19,40 @@ Public CDN example (GPE): `https://sync.doge.gopastearth.com/`
 
 ### Easiest: download a headless release (recommended)
 
-Prebuilt **Linux x86_64** packages ship on GitHub Releases:
+Prebuilt packages ship on GitHub Releases:
 
 **https://github.com/TheRetardedElon/Dogecoin-GPENode/releases**
 
+| Platform | Asset |
+|----------|--------|
+| **Linux x86_64** | `dogecoin-gpenode-linux-x86_64-*.tar.gz` |
+| **Windows x64 zip** | `dogecoin-gpenode-win64-*-gpenode-headless.zip` |
+| **Windows x64 setup** | `dogecoin-gpenode-*-win64-setup.exe` (NSIS) |
+
 ```bash
-# example asset name
+# Linux
 tar -xzf dogecoin-gpenode-linux-x86_64-*.tar.gz
 cd dogecoin-gpenode-linux-x86_64-*
 sudo bash install.sh
 # systemd unit should set Environment=LD_LIBRARY_PATH=/opt/dogecoin-pro/lib
 ```
 
-Contents: `dogecoind` + `dogecoin-cli` (no Qt, dump RPCs) · `gpenode-ops` · bundled libs · `deploy/` scripts.
+```powershell
+# Windows (elevated PowerShell) — after setup.exe or unzip
+# Install dir default: C:\Program Files\DogecoinGPENode
+# Data dir default:    C:\ProgramData\DogecoinGPENode
+cd "C:\Program Files\DogecoinGPENode"
+powershell -ExecutionPolicy Bypass -File .\install-service.ps1 -Profile dump
+# Status (Start Menu → GPENode Status, or:)
+.\status-service.ps1
+```
 
-Always verify the published `.sha256` file.
+Windows Service model: `gpenode-ops.exe service-run` is the SCM entrypoint and supervises `dogecoind.exe` (dogecoind is not a native Windows service). Same mainnet consensus; wrapper is process supervision only.
+
+Contents (Linux): `dogecoind` + `dogecoin-cli` (no Qt, dump RPCs) · `gpenode-ops` · bundled libs · `deploy/` scripts.  
+Contents (Windows): `dogecoind.exe` + `dogecoin-cli.exe` + `gpenode-ops.exe` · conf examples · install/status/uninstall service scripts.
+
+Always verify the published `.sha256` / `SHA256SUMS.txt` file.
 
 ### Or build from source
 

@@ -124,6 +124,7 @@ Section "Core binaries (required)" SecCore
   SetOutPath "$INSTDIR\bin"
   File "${BIN_DIR}\dogecoind.exe"
   File "${BIN_DIR}\dogecoin-cli.exe"
+  File "${BIN_DIR}\gpenode-ops.exe"
 
   SetOutPath "$INSTDIR\conf"
   File "conf\dogecoin.dump.conf.example"
@@ -157,9 +158,10 @@ Section "Core binaries (required)" SecCore
 
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
+    ; Do NOT embed NSIS $DataDir in the shortcut args — PowerShell resolves paths itself
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode Status.lnk" \
       "$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" \
-      "-NoExit -ExecutionPolicy Bypass -File $\"$INSTDIR\status-service.ps1$\" -BinDir $\"$INSTDIR\bin$\" -DataDir $\"$DataDir$\"" \
+      "-NoExit -ExecutionPolicy Bypass -File $\"$INSTDIR\status-service.ps1$\" -BinDir $\"$INSTDIR\bin$\"" \
       "$INSTDIR\bin\dogecoind.exe"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Open data folder.lnk" "$DataDir"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Edit dogecoin.conf.lnk" "notepad.exe" "$DataDir\dogecoin.conf"
@@ -184,7 +186,7 @@ SectionEnd
 Section "Desktop status shortcut" SecDesktop
   CreateShortCut "$DESKTOP\Dogecoin GPENode Status.lnk" \
     "$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" \
-    "-NoExit -ExecutionPolicy Bypass -File $\"$INSTDIR\status-service.ps1$\" -BinDir $\"$INSTDIR\bin$\" -DataDir $\"$DataDir$\"" \
+    "-NoExit -ExecutionPolicy Bypass -File $\"$INSTDIR\status-service.ps1$\" -BinDir $\"$INSTDIR\bin$\"" \
     "$INSTDIR\bin\dogecoind.exe"
 SectionEnd
 
@@ -195,7 +197,8 @@ SectionEnd
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Function LaunchStatus
-  Exec '"$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoExit -ExecutionPolicy Bypass -File "$INSTDIR\status-service.ps1" -BinDir "$INSTDIR\bin" -DataDir "$DataDir"'
+  ; Expand NSIS vars in a double-quoted string (single-quoted NSIS strings do not expand!)
+  Exec '"$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoExit -ExecutionPolicy Bypass -File "$INSTDIR\status-service.ps1" -BinDir "$INSTDIR\bin"'
 FunctionEnd
 
 Section "Uninstall"

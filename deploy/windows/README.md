@@ -1,82 +1,98 @@
 # Windows — Dogecoin GPENode / Core Pro Headless
 
-## Is this where we want to go?
-
-**Yes.** Next product cut after Linux headless:
+Headless **Windows Service** + operator **TUI/tray** for the same mainnet consensus as Core Pro.
 
 | Product | Package |
 |---------|---------|
-| Core Pro GUI | `dogecoin-qt` Windows installer (Dogecoin-Takeback) |
-| **GPENode / Core Pro Headless** | **`dogecoind` as Windows Service** (this folder) |
+| Core Pro GUI | `dogecoin-qt` (Dogecoin-Takeback) |
+| **GPENode Headless** | **`dogecoind` + service + TUI** (this folder / GitHub Releases) |
 
-Same consensus, coins, wallet rules, network. **No Qt product surface** in this package.
+## Screenshots
 
-## Phase W0 (here now)
+See the [root README](../../README.md) for TUI screenshots (home, overview, dump, dump-profile wallet note).
 
-Scripts that register an existing `dogecoind.exe` as a Windows Service:
+## Install (release)
 
-| Script | Role |
-|--------|------|
-| `install-service.ps1` | Admin install + auto-start + restart recovery |
-| `uninstall-service.ps1` | Remove service (optional datadir wipe) |
-| `status-service.ps1` | SCM + RPC smoke |
-| `conf/*.example` | Dump vs settlement profiles |
+Download from [Releases](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases):
 
-## What you need first
+- **`dogecoin-gpenode-*-win64-setup.exe`** — recommended  
+- or **`dogecoin-gpenode-win64-*-gpenode-headless.zip`**
 
-A **headless** Windows build of Core Pro DNA:
+### Unique RPC password
+
+Every **new** install generates a **cryptographically random** `rpcpassword` (no shared default).
+
+1. Wizard shows user + password  
+2. You must check “I have saved this password…”  
+3. Written to:
 
 ```text
-dogecoind.exe
-dogecoin-cli.exe
+%ProgramData%\DogecoinGPENode\dogecoin.conf
+%ProgramData%\DogecoinGPENode\RPC-CREDENTIALS.txt
 ```
 
-Built from dogedev with GUI product not required for this package (`--without-gui` / winbuild without shipping qt).  
-Place them in `deploy/windows/bin/` next to these scripts (or pass `-BinDir`).
+Existing conf is **not** overwritten on reinstall.
 
-## Install (elevated PowerShell)
+## Dump profile (default)
+
+Windows install uses **Profile dump** by default:
+
+- Optimized for **Fast Sync snapshot production** (`dumptxoutset`)  
+- Wallet usually **disabled** (`disablewallet=1`) — expected  
+- Pruned / bounded disk is common  
+- RPC localhost-only for TUI / ops  
+
+**Settlement profile** (optional): enable wallet + different conf for private app RPC.  
+Examples: `conf/dogecoin.dump.conf.example` · `conf/dogecoin.settlement.conf.example`
+
+## Service model
+
+`dogecoind.exe` is **not** a native Windows service.
+
+| Process | Role |
+|---------|------|
+| Service `DogecoinGPENode` | SCM entry: `gpenode-ops.exe service-run …` |
+| `dogecoind.exe` | Real node (child of the wrapper) |
+| `gpenode-tui.exe` | Operator UI (optional, session) |
+| `gpenode-tray.exe` | Tray icon (optional, session) |
+
+```powershell
+cd "C:\Program Files\DogecoinGPENode"
+powershell -ExecutionPolicy Bypass -File .\install-service.ps1 -Profile dump
+.\status-service.ps1
+.\bin\gpenode-tui.exe
+```
+
+## Portable / dev layout
+
+```text
+deploy/windows/
+  bin/                 dogecoind, cli, gpenode-ops, tray, tui
+  conf/*.example
+  install-service.ps1
+  status-service.ps1
+  uninstall-service.ps1
+  write-install-conf.ps1
+  gen-rpc-password.ps1
+  setup-gpenode-headless.nsi
+```
 
 ```powershell
 cd deploy\windows
-# copy binaries into .\bin\
-mkdir bin
-copy path\to\dogecoind.exe bin\
-copy path\to\dogecoin-cli.exe bin\
-
-# edit conf after first install if needed
-powershell -ExecutionPolicy Bypass -File .\install-service.ps1 -Profile dump
-
-.\status-service.ps1
+powershell -ExecutionPolicy Bypass -File .\install-service.ps1 -Profile dump -BinDir .\bin
 ```
-
-Default datadir: `%ProgramData%\DogecoinGPENode`
 
 ## Safety
 
 - Default conf binds RPC to **127.0.0.1** only  
-- Change `rpcpassword` before any real funds  
-- Service restart does not rewrite the chain — datadir is the source of truth  
+- Unique password per install — still do not expose RPC publicly  
+- Service restart does not rewrite the chain — datadir is source of truth  
 - Uninstall without `-RemoveDataDir` keeps wallets/chainstate  
 
-## Operator CLI + tray (W3)
+## Build installer (maintainers)
 
-```powershell
-# Phases: OFFLINE | INIT | IBD | SYNCED
-& "C:\Program Files\DogecoinGPENode\bin\gpenode-ops.exe" status
-& "C:\Program Files\DogecoinGPENode\bin\gpenode-ops.exe" service status
-
-# Session tray (does not stop the service when quit)
-& "C:\Program Files\DogecoinGPENode\bin\gpenode-tray.exe"
+```bash
+# WSL — after bins are in deploy/windows/bin/
+bash deploy/windows/build-installer.sh
+# → out/windows-headless/dogecoin-gpenode-*-win64-setup.exe
 ```
-
-## Later phases
-
-- **W2** — Task Scheduler dump job (like Linux systemd timer)  
-- **W3c** — Richer operator TUI (localhost RPC only; never consensus)  
-
-## Non-goals
-
-- Breaking clients / network / consensus / coins  
-- Replacing Core Pro GUI for merchants  
-- Public RPC  
-- GPE API requirement  

@@ -186,9 +186,9 @@
         See <a href="multi-operator-mesh.html">mesh page</a>.
       </p>
 
-      <h2>Operator kit (this repository)</h2>
+      <h2>Operator kit (this worktree)</h2>
       <p>
-        You are reading the public <strong>Dogecoin-GPENode</strong> kit. Layout:
+        You are reading docs from <code>C:\dogedevGPEnode</code>. Kit lives on disk:
       </p>
       <table>
         <thead>
@@ -197,42 +197,62 @@
         <tbody>
           <tr>
             <td><code>GPENODE.md</code>, <code>README.md</code></td>
-            <td>What GPENode is vs Core Pro product</td>
+            <td>What this tree is vs dogedev</td>
           </tr>
           <tr>
             <td><code>deploy/</code></td>
-            <td>Bootstrap, snapshot, publish, CDN handoff, conf examples, systemd</td>
-          </tr>
-          <tr>
-            <td><code>gpenode-ops/</code></td>
-            <td>Go operator CLI (status / dump / publish / verify-cdn)</td>
+            <td>Bootstrap, firewall, NVMe, snapshot, publish, CDN handoff, conf examples</td>
           </tr>
           <tr>
             <td><code>deploy/make_utxo_snapshot.sh</code></td>
             <td>Production dump → digests → <code>latest.json</code></td>
           </tr>
           <tr>
-            <td><code>scripts/</code></td>
-            <td>Optional remote helpers (need local secrets file)</td>
+            <td><code>deploy/publish_snapshots.sh</code></td>
+            <td>Optional rsync push (<code>CDN_TARGET</code>)</td>
           </tr>
           <tr>
-            <td><code>serverdetails.example.txt</code></td>
-            <td>Template only — copy to gitignored <code>serverdetails.txt</code></td>
+            <td><code>deploy/systemd/</code></td>
+            <td>Scheduled dump timer</td>
+          </tr>
+          <tr>
+            <td><code>deploy/install_custom_dogecoind.sh</code></td>
+            <td>Install daemon that has dump RPCs</td>
+          </tr>
+          <tr>
+            <td><code>scripts/ssh_cmd.py</code>, <code>node_status.py</code>, <code>run_remote_snapshot.py</code>, …</td>
+            <td>Remote ops — see <code>scripts/README-GPENODE.md</code></td>
+          </tr>
+          <tr>
+            <td><code>local/</code>, <code>serverdetails.txt</code></td>
+            <td>Secrets — gitignored; never open-source</td>
           </tr>
         </tbody>
       </table>
       <p class="muted">
-        Daemon source builds come from the Core Pro product repo (headless
-        <code>--without-gui</code>). This kit operates the node; it does not ship
-        end-user Qt packages.
+        Win build scripts and Qt packaging that sync in from dogedev are
+        <strong>Core Pro client noise</strong> — ignore for operator day-to-day.
+        Policy: root <code>SYNC_FROM_DOGEDEV.txt</code>.
       </p>
 
-      <h2>What never ships in git</h2>
+      <h2>Open-source later (clean kit)</h2>
+      <p>When publishing an operator kit without secrets, ship only:</p>
       <ul>
-        <li>Real host passwords, SSH private keys, wallet seeds</li>
-        <li>Live <code>dogecoin.conf</code> with <code>rpcpassword</code></li>
-        <li><code>serverdetails.txt</code> (use the example template only)</li>
+        <li><code>deploy/*.sh</code> examples with placeholders (no real IPs/passwords)</li>
+        <li><code>dogecoin.conf.example</code> (localhost RPC, prune guidance)</li>
+        <li>CDN nginx sketch + sample <code>latest.json</code></li>
+        <li>This HTML page + mesh + Fast Sync threat model</li>
+        <li>Checklist: dump → publish → verify curl/sha256</li>
       </ul>
+      <p>Do <strong>not</strong> ship: <code>serverdetails.txt</code>, wallets, live conf with rpcpassword, private keys.</p>
+
+      <h2>Independent operators (no GPE API required)</h2>
+      <p>
+        Other orgs do <strong>not</strong> need a GoPastEarth API, account, or merchant stack.
+        They need dump-capable <code>dogecoind</code>, static HTTPS, and the same hash model.
+        Full write-up on the operator kit: <code>deploy/INDEPENDENT_OPERATORS.md</code>
+        (also in the public <a href="https://github.com/TheRetardedElon/Dogecoin-GPENode">Dogecoin-GPENode</a> repo).
+      </p>
 
       <h2>Related</h2>
       <ul>

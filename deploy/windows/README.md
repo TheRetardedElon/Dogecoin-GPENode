@@ -70,3 +70,21 @@ Default datadir: `%ProgramData%\DogecoinGPENode`
 - Replacing Core Pro GUI for merchants  
 - Public RPC  
 - GPE API requirement  
+
+## GUI installer (recommended)
+
+Download **dogecoin-gpenode-*-win64-setup.exe** from GitHub Releases.
+
+Wizard pages: Welcome ? License ? Components ? Install folder ? Progress ? Finish.
+
+Components:
+- **Core binaries** (required) — dogecoind, dogecoin-cli
+- **Install as Windows Service** (optional) — auto-start headless node
+- **Desktop status shortcut** (optional)
+
+Rebuild installer (WSL, after headless binaries exist):
+
+```bash
+./deploy/windows/build-installer.sh
+```
+

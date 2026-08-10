@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Build NSIS setup.exe for GPENode / Core Pro Headless (Windows x64).
+# Run under WSL with makensis installed.
+set -euo pipefail
+export PATH="/usr/bin:/bin:/usr/local/bin:${PATH:-}"
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+VERSION="${VERSION:-1.14.102}"
+BIN_DIR="${BIN_DIR:-${ROOT}/bin}"
+OUT_DIR="${OUT_DIR:-/mnt/c/dogedevGPEnode/out/windows-headless}"
+ASSETS="${ASSETS:-/mnt/c/dogedev/share/pixmaps}"
+STAGE="${OUT_DIR}/nsis-stage"
+SETUP_NAME="dogecoin-gpenode-${VERSION}-win64-setup.exe"
+
+need() { command -v "$1" >/dev/null || { echo "missing $1"; exit 1; }; }
+need makensis
+
+[[ -f "${BIN_DIR}/dogecoind.exe" ]] || { echo "missing ${BIN_DIR}/dogecoind.exe — run build-headless-win64.sh first"; exit 1; }
+[[ -f "${BIN_DIR}/dogecoin-cli.exe" ]] || { echo "missing ${BIN_DIR}/dogecoin-cli.exe"; exit 1; }
+[[ -f "${ASSETS}/dogecoin.ico" ]] || { echo "missing ${ASSETS}/dogecoin.ico"; exit 1; }
+[[ -f "${ASSETS}/nsis-wizard.bmp" ]] || { echo "missing nsis-wizard.bmp"; exit 1; }
+[[ -f "${ASSETS}/nsis-header.bmp" ]] || { echo "missing nsis-header.bmp"; exit 1; }
+
+rm -rf "${STAGE}"
+mkdir -p "${STAGE}/bin" "${STAGE}/conf" "${OUT_DIR}"
+
+cp -a "${BIN_DIR}/dogecoind.exe" "${BIN_DIR}/dogecoin-cli.exe" "${STAGE}/bin/"
+cp -a "${ROOT}/install-service.ps1" "${ROOT}/uninstall-service.ps1" "${ROOT}/status-service.ps1" "${STAGE}/"
+cp -a "${ROOT}/conf/"*.example "${STAGE}/conf/"
+cp -a "${ROOT}/setup-gpenode-headless.nsi" "${STAGE}/"
+
+# License + readme for wizard
+if [[ -f /mnt/c/dogedev/COPYING ]]; then
+  cp -a /mnt/c/dogedev/COPYING "${STAGE}/LICENSE.txt"
+elif [[ -f /mnt/c/dogedevGPEnode/COPYING ]]; then
+  cp -a /mnt/c/dogedevGPEnode/COPYING "${STAGE}/LICENSE.txt"
+else
+  echo "MIT License — see https://opensource.org/licenses/MIT" > "${STAGE}/LICENSE.txt"
+fi
+
+cat > "${STAGE}/README.txt" <<EOF
+Dogecoin GPENode / Core Pro Headless — Windows x64
+Version: ${VERSION}
+
+This package installs a headless Dogecoin node (dogecoind), not the Qt GUI wallet.
+
+• Same mainnet consensus as Dogecoin Core Pro
+• Optional Windows Service (auto-start, restart on failure)
+• RPC defaults to 127.0.0.1 only — edit conf before using real funds
+
+Data directory (default):
+  %ProgramData%\\DogecoinGPENode
+
+After install:
+  Start Menu → Dogecoin GPENode → GPENode Status
+  Or: services.msc → DogecoinGPENode
+
+GitHub: https://github.com/TheRetardedElon/Dogecoin-GPENode
+EOF
+
+# Convert paths for NSIS on Linux (forward slashes)
+ASSETS_NSIS="${ASSETS//\\//}"
+STAGE_NSIS="${STAGE//\\//}"
+
+cd "${STAGE}"
+# OutFile absolute path for WSL
+OUT_ABS="${OUT_DIR}/${SETUP_NAME}"
+makensis \
+  -V3 \
+  -DVERSION="${VERSION}" \
+  -DOUT_SETUP="${OUT_ABS}" \
+  -DBIN_DIR="bin" \
+  -DASSETS="${ASSETS_NSIS}" \
+  setup-gpenode-headless.nsi
+
+# Fallback if OutFile was treated as relative
+if [[ ! -f "${OUT_ABS}" && -f "${STAGE}/${SETUP_NAME}" ]]; then
+  mv -f "${STAGE}/${SETUP_NAME}" "${OUT_ABS}"
+fi
+if [[ ! -f "${OUT_ABS}" ]]; then
+  # Sometimes NSIS writes next to .nsi with full path broken — search
+  found="$(find "${STAGE}" "${OUT_DIR}" -maxdepth 2 -name "${SETUP_NAME}" 2>/dev/null | head -1 || true)"
+  if [[ -n "${found}" ]]; then
+    mv -f "${found}" "${OUT_ABS}"
+  fi
+fi
+
+test -f "${OUT_ABS}"
+(
+  cd "${OUT_DIR}"
+  sha256sum "${SETUP_NAME}" > "${SETUP_NAME}.sha256"
+)
+echo "==> INSTALLER_OK"
+ls -lh "${OUT_ABS}" "${OUT_DIR}/${SETUP_NAME}.sha256"
+cat "${OUT_DIR}/${SETUP_NAME}.sha256"

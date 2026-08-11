@@ -17,7 +17,7 @@
 | Platform | How |
 |----------|-----|
 | **Linux (Debian/Ubuntu)** | `apt install dogecoin-gpenode` from [apt.dogecli.gopastearth.com](https://apt.dogecli.gopastearth.com/) (live, signed) |
-| **Windows** | [v1.14.102-gpenode3 setup.exe](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases/tag/v1.14.102-gpenode3) |
+| **Windows** | [Releases](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases) (setup.exe) — use latest tag |
 
 Public UTXO CDN example: `https://sync.doge.gopastearth.com/`
 

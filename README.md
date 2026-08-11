@@ -111,11 +111,110 @@ Example confs: `deploy/conf/dogecoin.dump.conf.example` · `dogecoin.settlement.
 
 ---
 
-## Linux quick start
+## Linux install
+
+Same headless node + operator tools as Windows. **No Qt GUI.**
+
+| Method | When to use |
+|--------|-------------|
+| **`.deb` (local / CI)** | Test now — package is built; install with `dpkg` |
+| **`apt` from our repo** | After the first **signed** publish to apt.dogecli (see below) |
+| **Tarball** | Portable / non-Debian hosts |
+
+### Why `apt install dogecoin-gpenode` fails today
+
+```text
+Error: Unable to locate package dogecoin-gpenode
+```
+
+That means either:
+
+1. You have **not** added our apt source yet, **or**
+2. The public origin is still a **shell only** (`https://apt.dogecli.gopastearth.com/` is up, but `pubkey.gpg` / signed `dists/` + `.deb` are not published yet).
+
+Until packages are published, use the **local `.deb` test** below.
+
+### Test the package now (local `.deb`)
+
+On Debian/Ubuntu or WSL (as root or with `sudo`):
+
+```bash
+# 1) Get the package (from a build machine or copy from the repo builder)
+#    Path after build-deb.sh:
+#    out/debian/dogecoin-gpenode_1.14.102-1_amd64.deb
+
+# From Windows host into WSL example:
+#   cp /mnt/c/dogedevGPEnode/out/debian/dogecoin-gpenode_1.14.102-1_amd64.deb .
+
+sha256sum dogecoin-gpenode_1.14.102-1_amd64.deb
+# expect: 0de7757204d2e15af10d9717cab2e27cd09d885ed827cfe1c7172cb436915cf3
+
+sudo apt-get update
+sudo apt-get install -y ./dogecoin-gpenode_1.14.102-1_amd64.deb
+# if apt complains about deps, fix then re-run:
+#   sudo apt-get install -f
+
+# 2) Service + credentials
+systemctl status dogecoin-gpenode --no-pager
+sudo cat /var/lib/dogecoin-gpenode/RPC-CREDENTIALS.txt
+sudo cat /etc/dogecoin-gpenode/dogecoin.conf | head
+
+# 3) Ops + TUI (same shell experience as Windows; color when TERM allows)
+gpenode-ops status
+gpenode-tui
+
+# 4) Logs
+sudo journalctl -u dogecoin-gpenode -f
+```
+
+Build the `.deb` yourself (Linux/WSL):
+
+```bash
+# need dogecoind, dogecoin-cli, gpenode-ops (and optional gpenode-tui) in BIN_DIR
+cd deploy/debian
+export BIN_DIR=/path/to/linux/bin
+export VERSION=1.14.102
+bash ./build-deb.sh
+# -> out/debian/dogecoin-gpenode_${VERSION}-1_amd64.deb
+```
+
+Details: [deploy/debian/README.md](./deploy/debian/README.md)
+
+### Apt install (after packages are published)
+
+When `https://apt.dogecli.gopastearth.com/pubkey.gpg` returns **200** and `apt update` lists `dogecoin-gpenode`:
+
+```bash
+curl -fsSL https://apt.dogecli.gopastearth.com/pubkey.gpg \
+  | sudo gpg --dearmor -o /usr/share/keyrings/gpenode.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/gpenode.gpg] https://apt.dogecli.gopastearth.com stable main" \
+  | sudo tee /etc/apt/sources.list.d/gpenode.list
+
+sudo apt update
+sudo apt install dogecoin-gpenode
+```
+
+Origin notes: [deploy/debian/APT-ORIGIN.md](./deploy/debian/APT-ORIGIN.md)  
+Host: static CDN on **gpeproxybox** only — no Dogecoin RPC on the apt host.
+
+### Linux paths (`.deb` / apt package)
+
+| Path | Purpose |
+|------|---------|
+| `/usr/bin/dogecoind` | Daemon |
+| `/usr/bin/dogecoin-cli` | CLI |
+| `/usr/bin/gpenode-ops` | Operator glue |
+| `/usr/bin/gpenode-tui` | Operator TUI (gold UI when terminal supports color) |
+| `/etc/dogecoin-gpenode/dogecoin.conf` | Config |
+| `/var/lib/dogecoin-gpenode/` | Datadir + `RPC-CREDENTIALS.txt` |
+| `dogecoin-gpenode.service` | systemd unit (auto-start on install) |
+
+### Linux tarball (portable)
 
 | Platform | Asset |
 |----------|--------|
-| **Linux x86_64** | `dogecoin-gpenode-linux-x86_64-*.tar.gz` |
+| **Linux x86_64** | `dogecoin-gpenode-linux-x86_64-*.tar.gz` (GitHub Releases) |
 | **Windows x64 setup** | `dogecoin-gpenode-*-win64-setup.exe` |
 | **Windows x64 zip** | `dogecoin-gpenode-win64-*-gpenode-headless.zip` |
 
@@ -123,7 +222,7 @@ Example confs: `deploy/conf/dogecoin.dump.conf.example` · `dogecoin.settlement.
 tar -xzf dogecoin-gpenode-linux-x86_64-*.tar.gz
 cd dogecoin-gpenode-linux-x86_64-*
 sudo bash install.sh
-# systemd: Environment=LD_LIBRARY_PATH=/opt/dogecoin-pro/lib
+export LD_LIBRARY_PATH=/opt/dogecoin-pro/lib
 export DOGECOIN_CLI=/opt/dogecoin-pro/bin/dogecoin-cli
 /opt/gpenode-ops/bin/gpenode-ops status
 ```
@@ -145,7 +244,7 @@ Always verify `SHA256SUMS.txt` / `.sha256` files.
 | Platform | Packaging |
 |----------|-----------|
 | **Windows** | NSIS setup + zip · Service · TUI · tray · unique RPC password |
-| **Linux** | Release tarball · systemd · `gpenode-ops` · deploy scripts |
+| **Linux** | `.deb` + apt origin · tarball · systemd · `gpenode-ops` · TUI |
 
 **Do not** rewrite Dogecoin consensus in another language for “speed.”  
 **Do** keep the node pure headless C++ and automate with Go / scripts.
@@ -159,8 +258,9 @@ Mesh stages: **M1** single public CDN · **M2** multi-URL `urls[]` failover.
 ```text
 deploy/           Operator scripts, CDN handoff, systemd, Windows installer/service
 deploy/windows/   NSIS, install-service, conf examples, unique-password helpers
+deploy/debian/    .deb build, apt publish, APT-ORIGIN (apt.dogecli.gopastearth.com)
 gpenode-ops/      Go operator CLI + Windows service host (service-run)
-gpenode-tui/      Windows operator TUI
+gpenode-tui/      Operator TUI (Windows + Linux)
 gpenode-tray/     Windows system tray
 html/docs/        Operator documentation (open index.html)
 GPENODE.md        What GPENode is
@@ -175,6 +275,8 @@ SECURITY.md       Secrets policy
 |-----|--------|
 | [GPENODE.md](./GPENODE.md) | What this project is / is not |
 | [deploy/windows/README.md](./deploy/windows/README.md) | Windows service + TUI |
+| [deploy/debian/README.md](./deploy/debian/README.md) | Build/install `.deb` |
+| [deploy/debian/APT-ORIGIN.md](./deploy/debian/APT-ORIGIN.md) | Public apt CDN |
 | [deploy/INDEPENDENT_OPERATORS.md](./deploy/INDEPENDENT_OPERATORS.md) | Running a dump node without a GPE API |
 | [deploy/OPERATOR_KIT.md](./deploy/OPERATOR_KIT.md) | Snapshot / publish ops |
 | [SECURITY.md](./SECURITY.md) | Secrets, RPC, CDN |

@@ -1,0 +1,19 @@
+Package: dogecoin-gpenode
+Version: __VERSION__-1
+Section: net
+Priority: optional
+Architecture: __ARCH__
+Depends: adduser, systemd | systemd-sysv
+Conflicts: dogecoind, dogecoin-qt
+Replaces: dogecoind
+Maintainer: The Retarded Elon <noreply@gopastearth.com>
+Homepage: https://github.com/TheRetardedElon/Dogecoin-GPENode
+Description: Dogecoin GPENode headless node (Core Pro consensus)
+ Headless Dogecoin node for operators (dogecoind + dogecoin-cli + gpenode-ops).
+ Same mainnet consensus as Core Pro; no Qt desktop wallet GUI.
+ .
+ Installs a systemd service (dogecoin-gpenode), generates a unique
+ localhost RPC password on first install, and defaults to a dump-oriented
+ conf profile (prune, wallet disabled).
+ .
+ RPC binds to 127.0.0.1 only. Do not expose port 22555 to the internet.

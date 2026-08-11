@@ -137,3 +137,11 @@ curl -I https://sync.doge.gopastearth.com/latest.json
 | [SETTLEMENT_NODE_HANDOFF.md](./SETTLEMENT_NODE_HANDOFF.md) | Dump-node operator (facts; secrets offline) |
 
 Product HTML: **GPENode**, **Multi-operator mesh**, **Fast Sync**, **Threat model**.
+
+## Apt / Debian package
+
+See [debian/README.md](./debian/README.md) and [debian/APT-ORIGIN.md](./debian/APT-ORIGIN.md).
+
+- Public origin: `https://apt.dogecli.gopastearth.com/` (gpeproxybox static CDN)
+- Build: `deploy/debian/build-deb.sh`
+- Publish: `deploy/debian/publish-apt.sh` (sign on build host, rsync public tree only)

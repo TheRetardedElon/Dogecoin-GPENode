@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+  purge)
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl disable dogecoin-gpenode.service >/dev/null 2>&1 || true
+      systemctl daemon-reload || true
+    fi
+    # Keep blockchain data unless operator deletes it:
+    #   rm -rf /var/lib/dogecoin-gpenode
+    # Do not auto-delete conf/datadir on purge (large chainstate).
+    echo "dogecoin-gpenode: package purged; data left at /var/lib/dogecoin-gpenode (delete manually if desired)."
+    ;;
+  remove)
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl daemon-reload || true
+    fi
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+  remove|upgrade|deconfigure)
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl stop dogecoin-gpenode.service >/dev/null 2>&1 || true
+    fi
+    ;;
+esac
+
+exit 0

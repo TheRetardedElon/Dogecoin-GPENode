@@ -1,0 +1,59 @@
+#!/bin/bash
+set -e
+
+NAME=dogecoin-gpenode
+USER=dogecoin
+GROUP=dogecoin
+DATADIR=/var/lib/dogecoin-gpenode
+ETCDIR=/etc/dogecoin-gpenode
+CONF="${ETCDIR}/dogecoin.conf"
+HELPER_DIR=/usr/share/dogecoin-gpenode
+
+case "$1" in
+  configure)
+    if ! getent group "$GROUP" >/dev/null; then
+      addgroup --system "$GROUP" || true
+    fi
+    if ! getent passwd "$USER" >/dev/null; then
+      adduser --system --ingroup "$GROUP" --home "$DATADIR" --no-create-home \
+        --shell /usr/sbin/nologin --gecos "Dogecoin GPENode" "$USER" || true
+    fi
+
+    mkdir -p "$DATADIR" "$ETCDIR" "${DATADIR}/logs"
+    chown "${USER}:${GROUP}" "$DATADIR" "${DATADIR}/logs" || true
+    chmod 750 "$DATADIR" || true
+
+    if [[ ! -f "$CONF" ]]; then
+      PASS="$("${HELPER_DIR}/gen-rpc-password.sh")"
+      EXAMPLE="${HELPER_DIR}/conf/dogecoin.dump.conf.example"
+      ARGS=(--datadir "$DATADIR" --rpcpassword "$PASS" --rpcuser gpenode --profile dump)
+      if [[ -f "$EXAMPLE" ]]; then
+        ARGS+=(--example "$EXAMPLE")
+      fi
+      "${HELPER_DIR}/write-install-conf.sh" "${ARGS[@]}"
+      # Prefer conf in /etc for operators; keep a copy path for dogecoind -conf=
+      if [[ -f "${DATADIR}/dogecoin.conf" ]]; then
+        cp -a "${DATADIR}/dogecoin.conf" "$CONF"
+      fi
+      chown "root:${GROUP}" "$CONF" "${DATADIR}/RPC-CREDENTIALS.txt" 2>/dev/null || true
+      chmod 640 "$CONF" "${DATADIR}/RPC-CREDENTIALS.txt" 2>/dev/null || true
+      echo "${NAME}: wrote unique RPC credentials to ${DATADIR}/RPC-CREDENTIALS.txt"
+    else
+      # ensure datadir conf symlink or copy not required; unit uses /etc path
+      true
+    fi
+
+    chown -R "${USER}:${GROUP}" "$DATADIR" || true
+
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl daemon-reload || true
+      if [[ "${DISABLE_GPENODE_AUTOSTART:-0}" != "1" ]]; then
+        systemctl enable dogecoin-gpenode.service >/dev/null 2>&1 || true
+        systemctl restart dogecoin-gpenode.service >/dev/null 2>&1 || \
+          systemctl start dogecoin-gpenode.service >/dev/null 2>&1 || true
+      fi
+    fi
+    ;;
+esac
+
+exit 0

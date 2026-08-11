@@ -277,7 +277,10 @@ SECURITY.md       Secrets policy
 | [deploy/INDEPENDENT_OPERATORS.md](./deploy/INDEPENDENT_OPERATORS.md) | Running a dump node without a GPE API |
 | [deploy/OPERATOR_KIT.md](./deploy/OPERATOR_KIT.md) | Snapshot / publish ops |
 | [SECURITY.md](./SECURITY.md) | Secrets, RPC, CDN |
+| [PRIVACY.md](./PRIVACY.md) | Privacy policy (canonical URL below) |
 | `html/docs/index.html` | Local HTML docs |
+
+**Privacy policy URL:** https://github.com/TheRetardedElon/Dogecoin-GPENode/blob/main/PRIVACY.md
 
 ---
 
@@ -301,3 +304,7 @@ Installer-generated passwords live only under the data directory on the operator
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+
+## Privacy
+
+[Privacy Policy](./PRIVACY.md) — https://github.com/TheRetardedElon/Dogecoin-GPENode/blob/main/PRIVACY.md

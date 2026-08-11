@@ -12,8 +12,9 @@
 | **Windows UI** | `gpenode-tui` + `gpenode-tray` | Operator TUI + tray (localhost RPC only) |
 | **CDN** | Static HTTPS | `latest.json` + multi‑GB `.dat` only |
 
-**Latest release:** [v1.14.102-gpenode2](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases/tag/v1.14.102-gpenode2)  
-Public CDN example (GPE): `https://sync.doge.gopastearth.com/`
+**Latest Windows release:** [v1.14.102-gpenode3](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases/tag/v1.14.102-gpenode3)  
+Public UTXO CDN example: `https://sync.doge.gopastearth.com/`  
+Apt origin (packages when published): `https://apt.dogecli.gopastearth.com/`
 
 ---
 

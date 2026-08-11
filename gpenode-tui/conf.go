@@ -19,6 +19,14 @@ type confKey struct {
 }
 
 func confPath() string {
+	if v := os.Getenv("DOGECOIN_CONF"); v != "" {
+		return v
+	}
+	// Debian package ships conf under /etc; datadir is separate.
+	pkg := "/etc/dogecoin-gpenode/dogecoin.conf"
+	if fileExists(pkg) {
+		return pkg
+	}
 	return filepath.Join(resolveDataDir(), "dogecoin.conf")
 }
 

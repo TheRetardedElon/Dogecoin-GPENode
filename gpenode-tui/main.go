@@ -1,11 +1,12 @@
 // gpenode-tui - gold-dark dense operator TUI (Grok Build / mockup style).
-// Localhost RPC + Windows service only. NO consensus logic.
+// Localhost RPC + service control (Windows SCM or Linux systemd). NO consensus logic.
 package main
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -15,13 +16,25 @@ import (
 	"github.com/muesli/termenv"
 )
 
-const tuiVersion = "0.4.1"
+const tuiVersion = "0.5.0"
 
 func init() {
-	// Windows Terminal often under-detects color; force truecolor so gold/green show.
-	_ = os.Setenv("COLORTERM", "truecolor")
-	_ = os.Setenv("TERM", "xterm-256color")
-	lipgloss.SetColorProfile(termenv.TrueColor)
+	// Color when the terminal can do it; plain when it cannot (PuTTY/dumb/NO_COLOR).
+	if os.Getenv("NO_COLOR") != "" || os.Getenv("GPENODE_NO_COLOR") != "" {
+		lipgloss.SetColorProfile(termenv.Ascii)
+		return
+	}
+	if runtime.GOOS == "windows" {
+		// Windows Terminal often under-detects color; force truecolor so gold/green show.
+		_ = os.Setenv("COLORTERM", "truecolor")
+		if os.Getenv("TERM") == "" {
+			_ = os.Setenv("TERM", "xterm-256color")
+		}
+		lipgloss.SetColorProfile(termenv.TrueColor)
+		return
+	}
+	// Linux/mac: adaptive truecolor / 256 / 16 / ascii from TERM + TTY.
+	lipgloss.SetColorProfile(termenv.ColorProfile())
 }
 
 // Gold-dark mockup palette
@@ -1279,12 +1292,16 @@ func (m model) viewOverview(w int) (string, int) {
 func (m model) viewNode(w int) (string, int) {
 	s := m.snap
 	var b strings.Builder
-	b.WriteString(titleBlock(w, "Dogecoin GPENode", "Node Control", "Windows service  |  gpenode-ops wrapper  |  dogecoind"))
+	svcHint := "Windows service  |  gpenode-ops  |  dogecoind"
+	if runtime.GOOS != "windows" {
+		svcHint = "systemd  |  dogecoin-gpenode.service  |  dogecoind"
+	}
+	b.WriteString(titleBlock(w, "Dogecoin GPENode", "Node Control", svcHint))
 	b.WriteString("\n\n")
 
 	// Dense status block (mockup-style)
 	rows := []struct{ k, v string }{
-		{"Service", serviceName},
+		{"Service", activeServiceName()},
 		{"State", colorSvc(s.Service) + " (headless)"},
 		{"Phase", colorPhase(s.Phase)},
 		{"Daemon", gold(nz(shortDaemonVer(s.Version), "-"))},
@@ -1300,9 +1317,15 @@ func (m model) viewNode(w int) (string, int) {
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")
-	b.WriteString(muted("  dogecoind is supervised by gpenode-ops service-run (not a native SCM binary)."))
-	b.WriteString("\n")
-	b.WriteString(muted("  Start/stop may require Administrator elevation."))
+	if runtime.GOOS == "windows" {
+		b.WriteString(muted("  dogecoind is supervised by gpenode-ops service-run (not a native SCM binary)."))
+		b.WriteString("\n")
+		b.WriteString(muted("  Start/stop may require Administrator elevation."))
+	} else {
+		b.WriteString(muted("  dogecoind runs under systemd unit dogecoin-gpenode.service."))
+		b.WriteString("\n")
+		b.WriteString(muted("  Start/stop may require sudo (polkit/password)."))
+	}
 	b.WriteString("\n\n")
 
 	before := countLines(b.String())

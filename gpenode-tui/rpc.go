@@ -13,7 +13,17 @@ import (
 	"time"
 )
 
-const serviceName = "DogecoinGPENode"
+const (
+	serviceNameWindows = "DogecoinGPENode"
+	serviceNameLinux   = "dogecoin-gpenode"
+)
+
+func activeServiceName() string {
+	if runtime.GOOS == "windows" {
+		return serviceNameWindows
+	}
+	return serviceNameLinux
+}
 
 type nodeSnapshot struct {
 	Time        string
@@ -67,7 +77,21 @@ func resolveDataDir() string {
 	if runtime.GOOS == "windows" {
 		return filepath.Join(envOr("ProgramData", `C:\ProgramData`), "DogecoinGPENode")
 	}
-	return filepath.Join(homeDir(), ".dogecoin")
+	// Debian package default, then classic ~/.dogecoin
+	for _, p := range []string{
+		"/var/lib/dogecoin-gpenode",
+		filepath.Join(homeDir(), ".dogecoin"),
+	} {
+		if dirExists(p) {
+			return p
+		}
+	}
+	return "/var/lib/dogecoin-gpenode"
+}
+
+func dirExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.IsDir()
 }
 
 func resolveOps() string {
@@ -124,7 +148,13 @@ func fileExists(p string) bool {
 func runCLI(args ...string) (string, error) {
 	cli := resolveCLI()
 	datadir := resolveDataDir()
-	full := append([]string{"-datadir=" + datadir}, args...)
+	full := []string{"-datadir=" + datadir}
+	// Package install keeps conf under /etc; pass -conf so CLI matches the daemon.
+	cfg := confPath()
+	if cfg != filepath.Join(datadir, "dogecoin.conf") {
+		full = append(full, "-conf="+cfg)
+	}
+	full = append(full, args...)
 	cmd := exec.Command(cli, full...)
 	hideConsole(cmd)
 	out, err := cmd.CombinedOutput()
@@ -132,53 +162,111 @@ func runCLI(args ...string) (string, error) {
 }
 
 func serviceState() string {
-	if runtime.GOOS != "windows" {
-		return "N/A"
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command("sc.exe", "query", serviceNameWindows)
+		hideConsole(cmd)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return "NOT_INSTALLED"
+		}
+		up := strings.ToUpper(string(out))
+		switch {
+		case strings.Contains(up, "RUNNING"):
+			return "RUNNING"
+		case strings.Contains(up, "STOPPED"):
+			return "STOPPED"
+		case strings.Contains(up, "START_PENDING"):
+			return "START_PENDING"
+		case strings.Contains(up, "STOP_PENDING"):
+			return "STOP_PENDING"
+		default:
+			return "UNKNOWN"
+		}
 	}
-	cmd := exec.Command("sc.exe", "query", serviceName)
-	hideConsole(cmd)
+	// Linux: systemd unit dogecoin-gpenode
+	cmd := exec.Command("systemctl", "is-active", serviceNameLinux)
 	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return "NOT_INSTALLED"
+	s := strings.TrimSpace(string(out))
+	if err != nil && s == "" {
+		// unit missing or systemctl unavailable
+		cmd2 := exec.Command("systemctl", "status", serviceNameLinux)
+		if err2 := cmd2.Run(); err2 != nil {
+			return "NOT_INSTALLED"
+		}
+		return "UNKNOWN"
 	}
-	up := strings.ToUpper(string(out))
-	switch {
-	case strings.Contains(up, "RUNNING"):
+	switch s {
+	case "active":
 		return "RUNNING"
-	case strings.Contains(up, "STOPPED"):
+	case "inactive", "failed":
 		return "STOPPED"
-	case strings.Contains(up, "START_PENDING"):
+	case "activating":
 		return "START_PENDING"
-	case strings.Contains(up, "STOP_PENDING"):
+	case "deactivating":
 		return "STOP_PENDING"
 	default:
-		return "UNKNOWN"
+		if s == "" {
+			return "UNKNOWN"
+		}
+		return strings.ToUpper(s)
 	}
 }
 
 func serviceAction(action string) (string, error) {
-	if runtime.GOOS != "windows" {
-		return "", fmt.Errorf("service control is Windows-only")
+	action = strings.ToLower(strings.TrimSpace(action))
+	if runtime.GOOS == "windows" {
+		ops := resolveOps()
+		var out []byte
+		var err error
+		if fileExists(ops) || ops == "gpenode-ops" {
+			cmd := exec.Command(ops, "service", action)
+			hideConsole(cmd)
+			out, err = cmd.CombinedOutput()
+		} else {
+			cmd := exec.Command("sc.exe", action, serviceNameWindows)
+			hideConsole(cmd)
+			out, err = cmd.CombinedOutput()
+		}
+		state := serviceState()
+		if err != nil {
+			msg := strings.TrimSpace(string(out))
+			if len(msg) > 120 {
+				msg = msg[:120] + "..."
+			}
+			if msg == "" {
+				msg = err.Error()
+			}
+			return fmt.Sprintf("service %s failed (state=%s)", action, state), fmt.Errorf("%s", msg)
+		}
+		return fmt.Sprintf("service %s ok · state %s", action, state), nil
 	}
-	// Prefer gpenode-ops when present
-	ops := resolveOps()
+
+	// Linux systemd (may need sudo)
+	sysAction := action
+	switch action {
+	case "start", "stop", "restart", "status":
+	default:
+		return "", fmt.Errorf("unknown service action %q (use start|stop|restart)", action)
+	}
+	try := func(bin string, args ...string) ([]byte, error) {
+		cmd := exec.Command(bin, args...)
+		return cmd.CombinedOutput()
+	}
 	var out []byte
 	var err error
-	if fileExists(ops) {
-		cmd := exec.Command(ops, "service", action)
-		hideConsole(cmd)
-		out, err = cmd.CombinedOutput()
-	} else {
-		cmd := exec.Command("sc.exe", action, serviceName)
-		hideConsole(cmd)
-		out, err = cmd.CombinedOutput()
+	// Prefer systemctl without sudo; fall back to sudo -n (non-interactive) then sudo
+	out, err = try("systemctl", sysAction, serviceNameLinux)
+	if err != nil {
+		out, err = try("sudo", "-n", "systemctl", sysAction, serviceNameLinux)
 	}
-	// Never dump raw sc.exe tables into the TUI tip line
+	if err != nil {
+		out, err = try("sudo", "systemctl", sysAction, serviceNameLinux)
+	}
 	state := serviceState()
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if len(msg) > 120 {
-			msg = msg[:120] + "…"
+			msg = msg[:120] + "..."
 		}
 		if msg == "" {
 			msg = err.Error()

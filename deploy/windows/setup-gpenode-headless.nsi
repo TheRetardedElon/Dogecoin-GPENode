@@ -49,14 +49,14 @@ BrandingText "Dogecoin GPENode — same mainnet consensus · no Qt GUI"
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_FUNCTION LaunchStatus
-!define MUI_FINISHPAGE_RUN_TEXT "Open status check (PowerShell)"
+!define MUI_FINISHPAGE_RUN_TEXT "Open GPENode status (maximized)"
 !define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\README.txt"
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "View README"
 !define MUI_FINISHPAGE_LINK "GPENode on GitHub"
 !define MUI_FINISHPAGE_LINK_LOCATION "${URL}"
 
 !define MUI_WELCOMEPAGE_TITLE "Dogecoin GPENode Headless"
-!define MUI_WELCOMEPAGE_TEXT "This installs a headless Dogecoin node (dogecoind) for operators.$\r$\n$\r$\n• Same mainnet consensus as Core Pro$\r$\n• No Qt desktop wallet GUI$\r$\n• Optional Windows Service$\r$\n$\r$\nClick Next to continue."
+!define MUI_WELCOMEPAGE_TEXT "This installs a headless Dogecoin node (dogecoind) for operators.$\r$\n$\r$\n- Same mainnet consensus as Core Pro$\r$\n- No Qt desktop wallet GUI$\r$\n- Optional Windows Service$\r$\n$\r$\nClick Next to continue."
 
 !define MUI_LICENSEPAGE_TEXT_TOP "Please review the license agreement before installing Dogecoin GPENode."
 !define MUI_LICENSEPAGE_TEXT_BOTTOM "If you accept the terms, click I Agree to continue. You must accept the agreement to install."
@@ -135,6 +135,8 @@ Section "Core binaries (required)" SecCore
   File "status-service.ps1"
   File "write-install-conf.ps1"
   File "gen-rpc-password.ps1"
+  File "launch-status.cmd"
+  File "launch-tui.cmd"
 
   SetOutPath "$INSTDIR\bin"
   File "${BIN_DIR}\dogecoind.exe"
@@ -153,12 +155,18 @@ Section "Core binaries (required)" SecCore
   ; Data dir + unique credentials (never shared default password)
   CreateDirectory "$DataDir"
   CreateDirectory "$DataDir\snapshots"
+  CreateDirectory "$DataDir\logs"
   ; Write conf with installer-generated password (keeps existing conf if present)
+  ; UTF-8 no BOM via write-install-conf.ps1
   nsExec::ExecToLog 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\write-install-conf.ps1" -DataDir "$DataDir" -RpcUser "$RpcUser" -RpcPassword "$RpcPassword" -Profile dump -ExampleConf "$INSTDIR\conf\dogecoin.dump.conf.example"'
   Pop $1
   DetailPrint "write-install-conf.ps1 exit=$1"
+  ${If} $1 != 0
+    DetailPrint "WARNING: conf write failed exit=$1 - check $DataDir\logs"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Could not write dogecoin.conf (exit $1).$\r$\n$\r$\nCheck logs under:$\r$\n$DataDir\logs$\r$\n$\r$\nYou can re-run write-install-conf.ps1 as Admin."
+  ${EndIf}
   WriteRegStr HKLM "${REGKEY}" "RpcUser" "$RpcUser"
-  ; Do NOT store password in registry — only in conf / credentials file
+  ; Do NOT store password in registry - only in conf / credentials file
 
   WriteRegStr HKLM "${REGKEY}" "InstallPath" "$INSTDIR"
   WriteRegStr HKLM "${REGKEY}" "DataDir" "$DataDir"
@@ -181,24 +189,24 @@ Section "Core binaries (required)" SecCore
 
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
-    ; Do NOT embed NSIS $DataDir in the shortcut args — PowerShell resolves paths itself
+    ; Maximized launchers via .cmd (PS first, CMD/TUI fallback) - SW_SHOWMAXIMIZED
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode Status.lnk" \
-      "$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" \
-      "-NoExit -ExecutionPolicy Bypass -File $\"$INSTDIR\status-service.ps1$\" -BinDir $\"$INSTDIR\bin$\"" \
-      "$INSTDIR\bin\dogecoind.exe"
+      "$INSTDIR\launch-status.cmd" "" \
+      "$INSTDIR\bin\dogecoind.exe" 0 SW_SHOWMAXIMIZED
+    IfFileExists "$INSTDIR\bin\gpenode-tui.exe" 0 skip_tui_sm
+      CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode TUI.lnk" \
+        "$INSTDIR\launch-tui.cmd" "" \
+        "$INSTDIR\bin\dogecoind.exe" 0 SW_SHOWMAXIMIZED
+    skip_tui_sm:
     IfFileExists "$INSTDIR\bin\gpenode-tray.exe" 0 skip_tray_sm
       CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode Tray.lnk" \
         "$INSTDIR\bin\gpenode-tray.exe" "" \
         "$INSTDIR\bin\gpenode-tray.exe"
     skip_tray_sm:
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Open data folder.lnk" "$DataDir"
+    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Open install logs.lnk" "$DataDir\logs"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Edit dogecoin.conf.lnk" "notepad.exe" "$DataDir\dogecoin.conf"
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\RPC credentials.lnk" "notepad.exe" "$DataDir\RPC-CREDENTIALS.txt"
-    IfFileExists "$INSTDIR\bin\gpenode-tui.exe" 0 skip_tui_sm
-      CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode TUI.lnk" \
-        "$WINDIR\System32\cmd.exe" "/c start GPENode $\"$INSTDIR\bin\gpenode-tui.exe$\"" \
-        "$INSTDIR\bin\dogecoind.exe"
-    skip_tui_sm:
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
@@ -211,17 +219,24 @@ Section "Install as Windows Service" SecService
   Pop $1
   DetailPrint "install-service.ps1 exit=$1"
   ${If} $1 != 0
-    DetailPrint "Service install returned non-zero; you can run install-service.ps1 manually as Admin."
+    DetailPrint "Service install failed exit=$1 - see $DataDir\logs\install-*.log"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Windows Service install failed (exit $1).$\r$\n$\r$\nDetails are in:$\r$\n$DataDir\logs$\r$\n$\r$\nFix: open elevated PowerShell and run:$\r$\n  $INSTDIR\install-service.ps1$\r$\n$\r$\nBinaries and dogecoin.conf were still installed."
+    WriteRegDWORD HKLM "${REGKEY}" "ServiceInstalled" 0
+  ${Else}
+    WriteRegDWORD HKLM "${REGKEY}" "ServiceInstalled" 1
   ${EndIf}
-  WriteRegDWORD HKLM "${REGKEY}" "ServiceInstalled" 1
 SectionEnd
 
 ; --- Optional: desktop shortcut to status ---
 Section "Desktop status shortcut" SecDesktop
   CreateShortCut "$DESKTOP\Dogecoin GPENode Status.lnk" \
-    "$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" \
-    "-NoExit -ExecutionPolicy Bypass -File $\"$INSTDIR\status-service.ps1$\" -BinDir $\"$INSTDIR\bin$\"" \
-    "$INSTDIR\bin\dogecoind.exe"
+    "$INSTDIR\launch-status.cmd" "" \
+    "$INSTDIR\bin\dogecoind.exe" 0 SW_SHOWMAXIMIZED
+  IfFileExists "$INSTDIR\bin\gpenode-tui.exe" 0 skip_desktop_tui
+    CreateShortCut "$DESKTOP\Dogecoin GPENode TUI.lnk" \
+      "$INSTDIR\launch-tui.cmd" "" \
+      "$INSTDIR\bin\dogecoind.exe" 0 SW_SHOWMAXIMIZED
+  skip_desktop_tui:
 SectionEnd
 
 ; --- Optional: start tray with login ---
@@ -237,13 +252,13 @@ SectionEnd
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} "dogecoind, dogecoin-cli, gpenode-ops (service host + CLI), conf examples, scripts."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecService} "Register gpenode-ops service-run as Windows Service (auto-start, restart on failure). RPC stays on 127.0.0.1."
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Add a desktop shortcut that opens a status PowerShell window."
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Desktop shortcuts: Status (maximized) and TUI if present."
   !insertmacro MUI_DESCRIPTION_TEXT ${SecTray} "Launch GPENode tray icon at login (tooltip: INIT/IBD/SYNCED). Quitting tray does not stop the service."
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Function LaunchStatus
-  ; Expand NSIS vars in a double-quoted string (single-quoted NSIS strings do not expand!)
-  Exec '"$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoExit -ExecutionPolicy Bypass -File "$INSTDIR\status-service.ps1" -BinDir "$INSTDIR\bin"'
+  ; Maximized status via launch-status.cmd (PowerShell, else TUI/ops)
+  Exec '"$INSTDIR\launch-status.cmd"'
 FunctionEnd
 
 Section "Uninstall"
@@ -260,6 +275,7 @@ Section "Uninstall"
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
   RMDir /r "$SMPROGRAMS\$StartMenuFolder"
   Delete "$DESKTOP\Dogecoin GPENode Status.lnk"
+  Delete "$DESKTOP\Dogecoin GPENode TUI.lnk"
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "DogecoinGPENodeTray"
 
   Delete "$INSTDIR\Uninstall.exe"
@@ -268,6 +284,10 @@ Section "Uninstall"
   Delete "$INSTDIR\install-service.ps1"
   Delete "$INSTDIR\uninstall-service.ps1"
   Delete "$INSTDIR\status-service.ps1"
+  Delete "$INSTDIR\write-install-conf.ps1"
+  Delete "$INSTDIR\gen-rpc-password.ps1"
+  Delete "$INSTDIR\launch-status.cmd"
+  Delete "$INSTDIR\launch-tui.cmd"
   RMDir /r "$INSTDIR\bin"
   RMDir /r "$INSTDIR\conf"
   RMDir "$INSTDIR"

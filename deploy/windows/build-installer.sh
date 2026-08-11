@@ -52,7 +52,10 @@ cp -a "${ROOT}/install-service.ps1" "${ROOT}/uninstall-service.ps1" "${ROOT}/sta
 [[ -f "${ROOT}/write-install-conf.ps1" ]] || { echo "missing write-install-conf.ps1"; exit 1; }
 [[ -f "${ROOT}/gen-rpc-password.ps1" ]] || { echo "missing gen-rpc-password.ps1"; exit 1; }
 [[ -f "${ROOT}/nsis-rpc-credentials.nsh" ]] || { echo "missing nsis-rpc-credentials.nsh"; exit 1; }
+[[ -f "${ROOT}/launch-status.cmd" ]] || { echo "missing launch-status.cmd"; exit 1; }
+[[ -f "${ROOT}/launch-tui.cmd" ]] || { echo "missing launch-tui.cmd"; exit 1; }
 cp -a "${ROOT}/write-install-conf.ps1" "${ROOT}/gen-rpc-password.ps1" "${ROOT}/nsis-rpc-credentials.nsh" "${STAGE}/"
+cp -a "${ROOT}/launch-status.cmd" "${ROOT}/launch-tui.cmd" "${STAGE}/"
 cp -a "${ROOT}/conf/"*.example "${STAGE}/conf/"
 cp -a "${ROOT}/setup-gpenode-headless.nsi" "${STAGE}/"
 # Optional TUI
@@ -90,6 +93,9 @@ Data directory (default):
 After install:
   Start Menu -> Dogecoin GPENode -> GPENode Status / TUI / RPC credentials
   Or: services.msc -> DogecoinGPENode
+
+Install / service errors are logged under:
+  %ProgramData%\\DogecoinGPENode\\logs\\install-YYYYMMDD.log
 
 GitHub: https://github.com/TheRetardedElon/Dogecoin-GPENode
 EOF

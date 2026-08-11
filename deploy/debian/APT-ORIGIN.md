@@ -28,7 +28,21 @@ Related hosts (**do not mix**):
 4. Build and sign on a **build / main / CI** machine; publish via `rsync`/`scp`.
 5. Prefer SSH keys into proxybox; disable password root login when practical.
 
-## Operator install (after first signed publish)
+## Status
+
+**Live.** Signed packages are published.
+
+| Check | Expected |
+|-------|----------|
+| `https://apt.dogecli.gopastearth.com/pubkey.gpg` | HTTP 200 |
+| `.../dists/stable/InRelease` | signed Release (Good signature) |
+| `.../pool/main/dogecoin-gpenode_*.deb` | HTTP 200 |
+| Package | `dogecoin-gpenode` `1.14.102-1` `amd64` |
+
+Signing key fingerprint: `191C 47CA DF15 5395 CF83  0057 99B1 7249 3442 438C`  
+(GPG private key stays on the **build/main** host under `app/infrastructure/apt-dogecli/keys` — never on proxybox.)
+
+## Operator install
 
 ```bash
 curl -fsSL https://apt.dogecli.gopastearth.com/pubkey.gpg \
@@ -43,9 +57,9 @@ sudo apt install dogecoin-gpenode
 
 ```text
 /var/www/gpenode-apt/
-  index.html          # human install page (already on shell)
+  index.html          # human install page
   README.txt
-  pubkey.gpg          # public key (publish when ready)
+  pubkey.gpg          # public key only
   pool/main/...       # .deb files
   dists/stable/...    # Packages, Release, InRelease (signed)
 ```
@@ -63,5 +77,3 @@ See [README.md](./README.md).
 ## Package name
 
 Default package: **`dogecoin-gpenode`** (lowercase, Debian style).
-
-Do not advertise `apt install` until `pubkey.gpg`, `InRelease`, and at least one `.deb` are live.

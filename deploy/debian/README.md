@@ -57,17 +57,19 @@ bash deploy/debian/build-deb.sh
 
 ## Publish to apt.dogecli.gopastearth.com
 
-See [APT-ORIGIN.md](./APT-ORIGIN.md). High level:
+**Public feed is live** for operators (see [APT-ORIGIN.md](./APT-ORIGIN.md)).
+
+Maintainer re-publish (new version):
 
 ```bash
 # On build machine (GPG private key present, never on CDN):
 export APT_SSH="root@45.76.248.250"   # or deploy user + key
 export APT_DOCROOT="/var/www/gpenode-apt"
-export GPG_KEY_ID="..."               # apt signing key fingerprint or email
+export GPG_KEY_ID="191C47CADF155395CF83005799B172493442438C"
 bash ./publish-apt.sh out/dogecoin-gpenode_*.deb
 ```
 
-`publish-apt.sh` stages `pool/` + regenerates `dists/` with `apt-ftparchive` (or uses `reprepro` if configured), signs `Release`, rsyncs to proxybox, and can push public `pubkey.gpg`.
+`publish-apt.sh` stages `pool/` + regenerates `dists/`, signs `Release`/`InRelease`, rsyncs **public** files only to proxybox (including `pubkey.gpg`).
 
 ## Shell experience (parity with Windows)
 

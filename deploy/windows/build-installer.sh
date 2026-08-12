@@ -58,12 +58,16 @@ cp -a "${ROOT}/write-install-conf.ps1" "${ROOT}/gen-rpc-password.ps1" "${ROOT}/n
 cp -a "${ROOT}/launch-status.cmd" "${ROOT}/launch-tui.cmd" "${STAGE}/"
 cp -a "${ROOT}/conf/"*.example "${STAGE}/conf/"
 cp -a "${ROOT}/setup-gpenode-headless.nsi" "${STAGE}/"
-# Optional TUI
+# REQUIRED operator TUI (ship always — installers must not omit this)
 if [[ -f "${BIN_DIR}/gpenode-tui.exe" ]]; then
   cp -a "${BIN_DIR}/gpenode-tui.exe" "${STAGE}/bin/"
 elif [[ -f /mnt/c/dogedevGPEnode/gpenode-tui/gpenode-tui.exe ]]; then
   cp -a /mnt/c/dogedevGPEnode/gpenode-tui/gpenode-tui.exe "${STAGE}/bin/"
+else
+  echo "ERROR: missing gpenode-tui.exe (build gpenode-tui/build-windows.ps1)"
+  exit 1
 fi
+ls -la "${STAGE}/bin/gpenode-tui.exe"
 
 # License + readme for wizard
 if [[ -f /mnt/c/dogedev/COPYING ]]; then

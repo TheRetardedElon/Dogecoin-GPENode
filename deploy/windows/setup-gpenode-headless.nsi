@@ -143,10 +143,8 @@ Section "Core binaries (required)" SecCore
   File "${BIN_DIR}\dogecoin-cli.exe"
   File "${BIN_DIR}\gpenode-ops.exe"
   File "${BIN_DIR}\gpenode-tray.exe"
-  ; Optional TUI
-  IfFileExists "${BIN_DIR}\gpenode-tui.exe" 0 skip_tui
-    File "${BIN_DIR}\gpenode-tui.exe"
-  skip_tui:
+  ; REQUIRED operator TUI (do NOT wrap in IfFileExists — that is runtime and skips extract!)
+  File "${BIN_DIR}\gpenode-tui.exe"
 
   SetOutPath "$INSTDIR\conf"
   File "conf\dogecoin.dump.conf.example"
@@ -193,11 +191,9 @@ Section "Core binaries (required)" SecCore
     CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode Status.lnk" \
       "$INSTDIR\launch-status.cmd" "" \
       "$INSTDIR\bin\dogecoind.exe" 0 SW_SHOWMAXIMIZED
-    IfFileExists "$INSTDIR\bin\gpenode-tui.exe" 0 skip_tui_sm
-      CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode TUI.lnk" \
-        "$INSTDIR\launch-tui.cmd" "" \
-        "$INSTDIR\bin\dogecoind.exe" 0 SW_SHOWMAXIMIZED
-    skip_tui_sm:
+    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode TUI.lnk" \
+      "$INSTDIR\launch-tui.cmd" "" \
+      "$INSTDIR\bin\gpenode-tui.exe" 0 SW_SHOWMAXIMIZED
     IfFileExists "$INSTDIR\bin\gpenode-tray.exe" 0 skip_tray_sm
       CreateShortCut "$SMPROGRAMS\$StartMenuFolder\GPENode Tray.lnk" \
         "$INSTDIR\bin\gpenode-tray.exe" "" \
@@ -232,11 +228,9 @@ Section "Desktop status shortcut" SecDesktop
   CreateShortCut "$DESKTOP\Dogecoin GPENode Status.lnk" \
     "$INSTDIR\launch-status.cmd" "" \
     "$INSTDIR\bin\dogecoind.exe" 0 SW_SHOWMAXIMIZED
-  IfFileExists "$INSTDIR\bin\gpenode-tui.exe" 0 skip_desktop_tui
-    CreateShortCut "$DESKTOP\Dogecoin GPENode TUI.lnk" \
-      "$INSTDIR\launch-tui.cmd" "" \
-      "$INSTDIR\bin\dogecoind.exe" 0 SW_SHOWMAXIMIZED
-  skip_desktop_tui:
+  CreateShortCut "$DESKTOP\Dogecoin GPENode TUI.lnk" \
+    "$INSTDIR\launch-tui.cmd" "" \
+    "$INSTDIR\bin\gpenode-tui.exe" 0 SW_SHOWMAXIMIZED
 SectionEnd
 
 ; --- Optional: start tray with login ---

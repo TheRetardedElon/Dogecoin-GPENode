@@ -1,105 +1,81 @@
 # Dogecoin GPENode
 
-**Headless Dogecoin operator kit** for Fast Sync snapshot production, Windows service operation, and optional private settlement RPC.
+**Operator kit for Dogecoin Core Pro.** Same mainnet, same `dogecoind`. This repo is the Server / Hybrid / dump-node line.
 
-> Same Dogecoin mainnet consensus. CDN is a dumb pipe. Clients fail-closed.  
-> **Not** a second coin. **Not** a Qt GUI wallet. **Not** a consensus rewrite.
+> Core Pro **replaces** the old GPENode product name on disk.  
+> **Not** a second coin. **Not** Qt. **Not** a consensus rewrite.
 
 | Layer | Tech | Role |
 |-------|------|------|
-| **Node** | C++ `dogecoind` (Core Pro / AssumeUTXO DNA) | Consensus, P2P, UTXO, `dumptxoutset` |
-| **Ops glue** | Go `gpenode-ops` | status · dump · publish · verify-cdn · Windows service host |
-| **Windows UI** | `gpenode-tui` + `gpenode-tray` | Operator TUI + tray (localhost RPC only) |
+| **Node** | C++ `dogecoind` (Core Pro / 1.14 DNA) | Consensus, P2P, UTXO, `dumptxoutset` |
+| **Desktop** | ImGui `dogecoin-pro-gui` | Hybrid / Client wallet UI (localhost RPC) |
+| **Ops glue** | Go `gpenode-ops` | status · dump · publish · Windows service host |
+| **Windows UI** | `corepro-launch` + `gpenode-tui` + `gpenode-tray` | Native picker (no console) · TUI · tray |
 | **CDN** | Static HTTPS | `latest.json` + multi‑GB `.dat` only |
 
-**Install**
+**Latest:** [v1.14.104-gpenode](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases/tag/v1.14.104-gpenode)  
+Same files as [Core Pro v1.14.104](https://github.com/TheRetardedElon/Dogecoin-Takeback/releases/tag/v1.14.104) — pick **Server** or **Hybrid**.  
+Desktop screenshots live on the [Takeback README](https://github.com/TheRetardedElon/Dogecoin-Takeback#screenshots).  
+Public CDN: `https://sync.doge.gopastearth.com/`
 
-| Platform | How |
-|----------|-----|
-| **Linux (Debian/Ubuntu)** | `apt install dogecoin-gpenode` from [apt.dogecli.gopastearth.com](https://apt.dogecli.gopastearth.com/) (live, signed) |
-| **Windows** | [Releases](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases) (setup.exe) — use latest tag |
+<p align="center">
+  <img src="https://i.imgur.com/btEJ7k3.png" alt="Client / Server / Hybrid" width="720" />
+</p>
 
-Public UTXO CDN example: `https://sync.doge.gopastearth.com/`
+<p align="center">
+  <img src="https://i.imgur.com/OJMui2T.png" alt="Core Pro Home (Hybrid desktop)" width="860" />
+</p>
 
 ---
 
-## Quick start (Linux — recommended)
+## Windows (Server / Hybrid)
 
-Debian/Ubuntu (and WSL):
+1. Download **`dogecoin-1.14.104-win64-setup-rpcsecure.exe`** from [Releases](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases/tag/v1.14.104-gpenode).  
+2. Run as Administrator. Choose **Server** (TUI only) or **Hybrid** (ImGui + TUI, **one** node).  
+3. Unique RPC password page: copy it, check the box, continue.  
+4. Server/Hybrid register the Windows service (display name **Dogecoin Core Pro**).  
+5. Hybrid Start Menu is **`corepro-launch.exe`** — a native picker, **no PowerShell/cmd window**. Remember is opt-in.
+
+| Path | Default (Hybrid / Client desktop) |
+|------|---------|
+| Install | `C:\Program Files\Dogecoin` |
+| Data | `%APPDATA%\Dogecoin` |
+| Credentials | `%APPDATA%\Dogecoin\RPC-CREDENTIALS.txt` |
+
+X sends the UI to the tray; the node stays up. Hybrid tray can reopen Desktop GUI or Operator TUI.
+
+> `dogecoind.exe` is **not** a native SCM service. The installer registers **`gpenode-ops.exe service-run`**. Consensus stays in C++.
+
+---
+
+## Linux (apt)
 
 ```bash
-# 1) Trust the apt key + add the repo
 curl -fsSL https://apt.dogecli.gopastearth.com/pubkey.gpg \
   | sudo gpg --dearmor -o /usr/share/keyrings/gpenode.gpg
-
 echo "deb [signed-by=/usr/share/keyrings/gpenode.gpg] https://apt.dogecli.gopastearth.com stable main" \
   | sudo tee /etc/apt/sources.list.d/gpenode.list
-
-# 2) Install
 sudo apt update
-sudo apt install dogecoin-gpenode
-
-# 3) Check
-systemctl status dogecoin-gpenode --no-pager
-sudo cat /var/lib/dogecoin-gpenode/RPC-CREDENTIALS.txt   # unique password for THIS machine
-gpenode-ops status
-gpenode-tui   # gold operator TUI when your terminal supports color
+sudo apt install dogecoin-core-pro
+# or: sudo apt install dogecoin-gpenode   # transitional package
+sudo systemctl status dogecoin-core-pro --no-pager
 ```
 
-Human install page: https://apt.dogecli.gopastearth.com/  
-Signing key fingerprint: `191C 47CA DF15 5395 CF83  0057 99B1 7249 3442 438C`
+Debian package on the release: `dogecoin-core-pro_1.14.104-1_amd64.deb`. Same consensus binary. Qt is not shipped.
 
 ---
 
-## Windows client (featured)
-
-GPENode on Windows is a **headless service** plus a **gold-dark operator TUI** — not the Qt wallet. Same mainnet as [Core Pro](https://github.com/TheRetardedElon/Dogecoin-Takeback).
-
-<p align="center">
-  <img src="https://i.imgur.com/VPMlmgu.png" alt="GPENode TUI home menu" width="720" />
-</p>
-
-<p align="center">
-  <img src="https://i.imgur.com/O5OJGl7.png" alt="GPENode TUI Overview — chain + service" width="720" />
-</p>
-
-<p align="center">
-  <img src="https://i.imgur.com/odesIzS.png" alt="GPENode TUI UTXO Dump / Fast Sync" width="720" />
-</p>
-
-### What you get on Windows
+## What you get
 
 | Piece | Role |
 |-------|------|
-| **Windows Service** `DogecoinGPENode` | Always-on `dogecoind` via `gpenode-ops service-run` |
-| **gpenode-tui** | Keyboard/mouse operator UI (Overview, Node, Dump, CDN, Settings, …) |
-| **gpenode-tray** | System tray status; open TUI / data folder / conf |
-| **Unique RPC password** | Generated **per install** (no shared default) → `dogecoin.conf` + `RPC-CREDENTIALS.txt` |
-
-### Install (recommended)
-
-1. Download **`dogecoin-gpenode-*-win64-setup.exe`** from [Releases](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases).  
-2. Run as Administrator.  
-3. On the **Unique RPC password** page: copy the password, check the box, continue.  
-4. Optional: install as Windows Service + tray.  
-5. Open **GPENode TUI** or **GPENode Status** from the Start Menu.
-
-| Path | Default |
-|------|---------|
-| Install | `C:\Program Files\DogecoinGPENode` |
-| Data | `C:\ProgramData\DogecoinGPENode` |
-| Credentials | `%ProgramData%\DogecoinGPENode\RPC-CREDENTIALS.txt` |
-
-```powershell
-# After install — service + TUI
-cd "C:\Program Files\DogecoinGPENode"
-powershell -ExecutionPolicy Bypass -File .\install-service.ps1 -Profile dump
-.\bin\gpenode-tui.exe
-```
-
-Portable zip is also on Releases (`*-gpenode-headless.zip`).
-
-> **Note:** `dogecoind.exe` is **not** a native Windows SCM service. The installer registers **`gpenode-ops.exe service-run`**, which supervises the daemon (start/stop, restarts). Consensus stays in C++.
+| **`dogecoind`** | The node |
+| **`dogecoin-pro-gui`** | ImGui desktop (Client / Hybrid) |
+| **`corepro-launch`** | Windows launcher / Hybrid picker (no console) |
+| **`gpenode-tui`** | Operator TUI |
+| **`gpenode-tray`** | Tray: reopen GUI or TUI |
+| **`gpenode-ops`** | Service host + dump/CDN glue |
+| **Unique RPC password** | Per install, localhost only |
 
 ---
 
@@ -144,87 +120,25 @@ Example confs: `deploy/conf/dogecoin.dump.conf.example` · `dogecoin.settlement.
 
 ---
 
-## Linux install (details)
+## Linux tarball (optional)
 
-Same headless node + operator tools as Windows. **No Qt GUI.**
-
-| Method | When to use |
-|--------|-------------|
-| **`apt` (recommended)** | Debian/Ubuntu — [apt.dogecli.gopastearth.com](https://apt.dogecli.gopastearth.com/) is **live and signed** |
-| **Local `.deb`** | Offline install / CI / air-gapped |
-| **Tarball** | Portable / non-Debian hosts |
-
-### Apt (copy-paste)
-
-```bash
-curl -fsSL https://apt.dogecli.gopastearth.com/pubkey.gpg \
-  | sudo gpg --dearmor -o /usr/share/keyrings/gpenode.gpg
-
-echo "deb [signed-by=/usr/share/keyrings/gpenode.gpg] https://apt.dogecli.gopastearth.com stable main" \
-  | sudo tee /etc/apt/sources.list.d/gpenode.list
-
-sudo apt update
-sudo apt install dogecoin-gpenode
-```
-
-If you see `Unable to locate package dogecoin-gpenode`, you usually forgot the `sources.list.d` lines or `apt update` above.
-
-**After install**
-
-```bash
-systemctl status dogecoin-gpenode --no-pager
-sudo cat /var/lib/dogecoin-gpenode/RPC-CREDENTIALS.txt
-gpenode-ops status
-gpenode-tui
-sudo journalctl -u dogecoin-gpenode -f
-```
-
-First install generates a **unique** localhost RPC password (no shared default).  
-systemd unit `dogecoin-gpenode` is enabled and started automatically.
-
-Origin / security notes: [deploy/debian/APT-ORIGIN.md](./deploy/debian/APT-ORIGIN.md)  
-(static HTTPS only — no Dogecoin RPC on the apt host)
-
-### Linux paths (package)
-
-| Path | Purpose |
-|------|---------|
-| `/usr/bin/dogecoind` | Daemon |
-| `/usr/bin/dogecoin-cli` | CLI |
-| `/usr/bin/gpenode-ops` | Operator glue |
-| `/usr/bin/gpenode-tui` | Operator TUI (color when terminal supports it) |
-| `/etc/dogecoin-gpenode/dogecoin.conf` | Config |
-| `/var/lib/dogecoin-gpenode/` | Datadir + `RPC-CREDENTIALS.txt` |
-| `dogecoin-gpenode.service` | systemd unit |
-
-### Local `.deb` (offline)
-
-```bash
-# download from the apt pool, or use a built file:
-#   https://apt.dogecli.gopastearth.com/pool/main/dogecoin-gpenode_1.14.102-1_amd64.deb
-sudo apt-get install -y ./dogecoin-gpenode_1.14.102-1_amd64.deb
-```
-
-Build from this repo (maintainers): [deploy/debian/README.md](./deploy/debian/README.md)
-
-### Linux tarball (portable)
+Prefer apt / the `.deb` above. Older tarball names:
 
 | Platform | Asset |
 |----------|--------|
-| **Linux x86_64** | `dogecoin-gpenode-linux-x86_64-*.tar.gz` ([Releases](https://github.com/TheRetardedElon/Dogecoin-GPENode/releases)) |
-| **Windows x64 setup** | `dogecoin-gpenode-*-win64-setup.exe` |
-| **Windows x64 zip** | `dogecoin-gpenode-win64-*-gpenode-headless.zip` |
+| **Linux x86_64** | `dogecoin-gpenode-linux-x86_64-*.tar.gz` |
+| **Windows** | Use `dogecoin-1.14.104-win64-setup-rpcsecure.exe` |
 
 ```bash
 tar -xzf dogecoin-gpenode-linux-x86_64-*.tar.gz
 cd dogecoin-gpenode-linux-x86_64-*
 sudo bash install.sh
-export LD_LIBRARY_PATH=/opt/dogecoin-pro/lib
+# systemd: Environment=LD_LIBRARY_PATH=/opt/dogecoin-pro/lib
 export DOGECOIN_CLI=/opt/dogecoin-pro/bin/dogecoin-cli
 /opt/gpenode-ops/bin/gpenode-ops status
 ```
 
-Always verify `SHA256SUMS.txt` / `.sha256` files when using GitHub Release assets.
+Always verify `SHA256SUMS.txt` / `.sha256` files.
 
 ---
 
@@ -241,7 +155,7 @@ Always verify `SHA256SUMS.txt` / `.sha256` files when using GitHub Release asset
 | Platform | Packaging |
 |----------|-----------|
 | **Windows** | NSIS setup + zip · Service · TUI · tray · unique RPC password |
-| **Linux** | `.deb` + apt origin · tarball · systemd · `gpenode-ops` · TUI |
+| **Linux** | Release tarball · systemd · `gpenode-ops` · deploy scripts |
 
 **Do not** rewrite Dogecoin consensus in another language for “speed.”  
 **Do** keep the node pure headless C++ and automate with Go / scripts.
@@ -255,9 +169,8 @@ Mesh stages: **M1** single public CDN · **M2** multi-URL `urls[]` failover.
 ```text
 deploy/           Operator scripts, CDN handoff, systemd, Windows installer/service
 deploy/windows/   NSIS, install-service, conf examples, unique-password helpers
-deploy/debian/    .deb build, apt publish, APT-ORIGIN (apt.dogecli.gopastearth.com)
 gpenode-ops/      Go operator CLI + Windows service host (service-run)
-gpenode-tui/      Operator TUI (Windows + Linux)
+gpenode-tui/      Windows operator TUI
 gpenode-tray/     Windows system tray
 html/docs/        Operator documentation (open index.html)
 GPENODE.md        What GPENode is
@@ -272,15 +185,10 @@ SECURITY.md       Secrets policy
 |-----|--------|
 | [GPENODE.md](./GPENODE.md) | What this project is / is not |
 | [deploy/windows/README.md](./deploy/windows/README.md) | Windows service + TUI |
-| [deploy/debian/README.md](./deploy/debian/README.md) | Build/install `.deb` |
-| [deploy/debian/APT-ORIGIN.md](./deploy/debian/APT-ORIGIN.md) | Public apt CDN |
 | [deploy/INDEPENDENT_OPERATORS.md](./deploy/INDEPENDENT_OPERATORS.md) | Running a dump node without a GPE API |
 | [deploy/OPERATOR_KIT.md](./deploy/OPERATOR_KIT.md) | Snapshot / publish ops |
 | [SECURITY.md](./SECURITY.md) | Secrets, RPC, CDN |
-| [PRIVACY.md](./PRIVACY.md) | Privacy policy (canonical URL below) |
 | `html/docs/index.html` | Local HTML docs |
-
-**Privacy policy URL:** https://github.com/TheRetardedElon/Dogecoin-GPENode/blob/main/PRIVACY.md
 
 ---
 
@@ -304,7 +212,3 @@ Installer-generated passwords live only under the data directory on the operator
 ## License
 
 MIT — see [LICENSE](./LICENSE).
-
-## Privacy
-
-[Privacy Policy](./PRIVACY.md) — https://github.com/TheRetardedElon/Dogecoin-GPENode/blob/main/PRIVACY.md
